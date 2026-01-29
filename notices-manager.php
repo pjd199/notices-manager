@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Advanced Notices Manager
- * Description: Categorized management with Introduction section, category-specific tags, status badges, and stale alerts.
- * Version: 2.6
+ * Description: Categorized management with Introduction section, dynamic buttons, status badges, 18-day stale alerts, and Event Date sorting.
+ * Version: 2.8
  * Author: Gemini
  */
 
@@ -25,13 +25,7 @@ function anm_render_page() {
         if (!$cat_obj) continue;
 
         $cat_name = esc_html($cat_obj->name);
-
-        // Logic for Introduction tags vs the rest
-        if ($cat_slug === 'introduction') {
-            $cat_suffixes = ['full', 'parked']; // Updated as requested
-        } else {
-            $cat_suffixes = $suffixes;
-        }
+        $cat_suffixes = ($cat_slug === 'introduction') ? ['full', 'parked'] : $suffixes;
 
         $cat_specific_tags = [];
         foreach ($cat_suffixes as $sfx) { $cat_specific_tags[] = $cat_slug . '-' . $sfx; }
@@ -43,6 +37,12 @@ function anm_render_page() {
             'category_name'  => $cat_slug,
             'tax_query'      => [['taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $cat_specific_tags]],
         ];
+
+        if ($cat_slug === 'events') {
+            $args['meta_key'] = 'event_start';
+            $args['orderby']  = 'meta_value';
+            $args['order']    = 'ASC';
+        }
 
         $query = new WP_Query($args);
         echo "<h2>$cat_name <span class='count' style='font-weight:normal; color:#666;'>({$query->found_posts})</span></h2>";
@@ -60,8 +60,8 @@ function anm_render_page() {
                     <?php endif; ?>
                     <th style="width: 120px;">Published</th>
                     <?php if($cat_slug !== 'introduction'): ?>
-                        <th style="width: 50px; text-align:center;">Img</th>
-                        <th style="width: 50px; text-align:center;">Exc</th>
+                        <th style="width: 70px; text-align:center;">Image</th>
+                        <th style="width: 70px; text-align:center;">Excerpt</th>
                     <?php endif; ?>
                     <th style="width: 180px;">Tag Switcher</th>
                 </tr>
@@ -77,7 +77,8 @@ function anm_render_page() {
                     $current_tags = wp_get_post_tags($post_id, ['fields' => 'slugs']);
                     $active_tag = reset(array_intersect($current_tags, $cat_specific_tags));
 
-                    $is_stale = (($today - $pub_date) > (21 * DAY_IN_SECONDS)) || ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today);
+                    // Updated Stale Logic: 18 Days or Event Date Passed
+                    $is_stale = (($today - $pub_date) > (18 * DAY_IN_SECONDS)) || ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today);
                     $is_parked = (strpos($active_tag, '-parked') !== false);
 
                     $row_style = '';
@@ -136,9 +137,9 @@ function anm_render_page() {
         <h3 style="margin-top: 0;"><span class="dashicons dashicons-editor-help" style="vertical-align: middle; margin-right: 5px;"></span> Reference Guide</h3>
         <table class="form-table">
             <tr><th scope="row"><strong>Statuses</strong></th><td><span style="color:#646970; font-weight:bold;">Draft/Pending</span>, <span style="color:#2271b1; font-weight:bold;">Scheduled</span>, <span style="color:#d63638; font-weight:bold;">Private</span>.</td></tr>
-            <tr><th scope="row"><strong>Full/Short/List</strong></th><td>Determines if the full text, excerpt, or just the link appears in notices.</td></tr>
+            <tr><th scope="row"><strong>Full/Short/List</strong></th><td>Determines if the full text, excerpt, or link appears in notices.</td></tr>
             <tr><th scope="row"><strong>Parked</strong></th><td>Post is "parked" for later publication; row is faded out in manager.</td></tr>
-            <tr><th scope="row"><strong>Stale Posts</strong></th><td>Highlighted in <span style="background:#fff8e5; padding: 2px 5px; border: 1px solid #ccd0d4;">yellow</span>. News > 3 weeks old or past events.</td></tr>
+            <tr><th scope="row"><strong>Stale Posts</strong></th><td>Highlighted in <span style="background:#fff8e5; padding: 2px 5px; border: 1px solid #ccd0d4;">yellow</span>. News > 18 days old or past events.</td></tr>
         </table>
     </div>
     </div>
