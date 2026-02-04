@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Advanced Notices Manager
- * Description: Categorized management with Introduction section, status badges, 18-day stale alerts, and AJAX category moving.
- * Version: 3.0
+ * Description: Management with Inline Move/Clone/Bin panels, 18-day stale alerts, and smart tag removal.
+ * Version: 3.5
  * Author: Gemini
  */
 
@@ -18,7 +18,9 @@ function anm_render_page() {
     $suffixes = ['full', 'short', 'list', 'parked'];
     $today = strtotime('today');
     
-    echo '<div class="wrap"><h1 class="wp-heading-inline">Notices Manager</h1><hr class="wp-header-end">';
+    echo '<div class="wrap"><h1 class="wp-heading-inline">Notices Manager</h1>';
+    echo '<a href="' . home_url('/notices') . '" class="page-title-action" target="_blank">View Notices Page</a>';
+    echo '<hr class="wp-header-end">';
 
     foreach ($categories as $cat_slug) {
         $cat_obj = get_category_by_slug($cat_slug);
@@ -46,7 +48,8 @@ function anm_render_page() {
         $query = new WP_Query($args);
         echo "<h2>$cat_name <span class='count' style='font-weight:normal; color:#666;'>({$query->found_posts})</span></h2>";
         
-        $new_post_url = admin_url("post-new.php?pre_cat={$cat_obj->term_id}&pre_tag={$cat_slug}-full");
+        $default_tag = ($cat_slug === 'introduction') ? 'introduction-full' : "{$cat_slug}-short";
+        $new_post_url = admin_url("post-new.php?pre_cat={$cat_obj->term_id}&pre_tag={$default_tag}");
         echo "<a href='$new_post_url' class='button action' style='margin-bottom:15px;'>+ Add New $cat_name Post</a>";
 
         ?>
@@ -54,9 +57,7 @@ function anm_render_page() {
             <thead>
                 <tr>
                     <th style="width: 25%;">Title</th>
-                    <?php if($cat_slug === 'events'): ?>
-                        <th style="width: 120px;">Event Date</th>
-                    <?php endif; ?>
+                    <?php if($cat_slug === 'events'): ?><th style="width: 120px;">Event Date</th><?php endif; ?>
                     <th style="width: 120px;">Published</th>
                     <?php if($cat_slug !== 'introduction'): ?>
                         <th style="width: 70px; text-align:center;">Image</th>
@@ -77,10 +78,9 @@ function anm_render_page() {
                     
                     $is_stale = (($today - $pub_date) > (18 * DAY_IN_SECONDS)) || ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today);
                     $is_parked = (strpos($active_tag, '-parked') !== false);
-
                     $row_style = $is_parked ? 'opacity: 0.7; background-color: #f6f7f7;' : ($is_stale ? 'background-color: #fff8e5;' : '');
                 ?>
-                <tr style="<?php echo $row_style; ?>" class="anm-row">
+                <tr style="<?php echo $row_style; ?>" class="anm-row" id="post-row-<?php echo $post_id; ?>">
                     <td class="column-title has-row-actions">
                         <strong><a class="row-title" href="<?php echo get_edit_post_link(); ?>"><?php the_title(); ?></a></strong>
                         <?php 
@@ -89,21 +89,28 @@ function anm_render_page() {
                                 $label = isset($status_labels[$status]) ? $status_labels[$status] : ucfirst($status);
                                 echo " — <span style='color:#2271b1; font-weight:600; font-size:11px;'>$label</span>";
                             }
-                            if($is_parked) echo ' — <span style="color:#666; font-size:10px; font-weight:bold;">[PARKED]</span>';
-                            elseif($is_stale) echo ' — <span style="color:#d63638; font-size:10px; font-weight:bold;">[STALE]</span>'; 
                         ?>
                         <div class="row-actions">
                             <span class="edit"><a href="<?php echo get_edit_post_link(); ?>">Edit</a> | </span>
-                            <span class="move"><a href="#" class="anm-move-trigger" style="color:#2271b1;">Move</a> | </span>
+                            <span class="move"><a href="#" class="anm-panel-trigger" data-target="move" style="color:#2271b1;">Move</a> | </span>
                             <span class="clone"><a href="<?php echo wp_nonce_url(admin_url("admin-ajax.php?action=anm_clone_post&post_id=$post_id"), 'anm_clone_nonce'); ?>" onclick="return confirm('Clone to new draft?')">Clone</a> | </span>
                             <span class="view"><a href="<?php the_permalink(); ?>" target="_blank">View</a> | </span>
-                            <span class="trash"><a href="<?php echo get_delete_post_link($post_id); ?>" class="submitdelete" style="color:#d63638;">Bin</a></span>
+                            <span class="trash"><a href="#" class="anm-panel-trigger" data-target="bin" style="color:#d63638;">Bin</a></span>
                         </div>
-                        <div class="anm-move-panel" style="display:none; margin-top:5px; padding:10px; background:#f0f0f1; border-radius:3px; border:1px solid #ccd0d4;">
+
+                        <div class="anm-panel anm-move-panel" style="display:none; margin-top:5px; padding:10px; background:#f0f0f1; border-radius:3px; border:1px solid #ccd0d4; position:relative;">
+                            <a href="#" class="anm-close-panel" style="position:absolute; right:8px; top:5px; text-decoration:none; color:#666; font-weight:bold;">[X]</a>
                             <small><strong>Move to Category:</strong></small><br>
                             <?php foreach($categories as $dest): if($dest === $cat_slug) continue; ?>
                                 <button class="button button-small anm-do-move" data-postid="<?php echo $post_id; ?>" data-dest="<?php echo $dest; ?>" style="margin-top:4px;"><?php echo ucfirst($dest); ?></button>
                             <?php endforeach; ?>
+                        </div>
+
+                        <div class="anm-panel anm-bin-panel" style="display:none; margin-top:5px; padding:10px; background:#fdf2f2; border-radius:3px; border:1px solid #d63638; position:relative;">
+                            <a href="#" class="anm-close-panel" style="position:absolute; right:8px; top:5px; text-decoration:none; color:#d63638; font-weight:bold;">[X]</a>
+                            <small><strong>Bin Action:</strong></small><br>
+                            <button class="button button-small anm-do-remove-notice" data-postid="<?php echo $post_id; ?>" data-catslug="<?php echo $cat_slug; ?>" style="margin-top:4px;">Remove from Notices</button>
+                            <button class="button button-small anm-do-trash-post" data-postid="<?php echo $post_id; ?>" style="margin-top:4px; color:#d63638; border-color:#d63638;">Move to Trash</button>
                         </div>
                     </td>
                     <?php if($cat_slug === 'events'): ?><td><strong><?php echo $e_date_raw ? date('d/m/Y', $e_date_ts) : '—'; ?></strong></td><?php endif; ?>
@@ -129,49 +136,58 @@ function anm_render_page() {
         </table>
         <?php
     }
+    echo '</div>';
     ?>
-    <div style="margin-top: 50px; padding: 20px; background: #fff; border: 1px solid #ccd0d4; border-radius: 4px; max-width: 800px;">
-        <h3 style="margin-top: 0;"><span class="dashicons dashicons-editor-help" style="vertical-align: middle; margin-right: 5px;"></span> Reference Guide</h3>
-        <table class="form-table">
-            <tr><th scope="row" style="width: 150px;"><strong>Full</strong></th><td>The full post text will be displayed in the notices.</td></tr>
-            <tr><th scope="row"><strong>Short</strong></th><td>Only the post excerpt will be shown with a "Read More" button.</td></tr>
-            <tr><th scope="row"><strong>List</strong></th><td>Only the title will be shown as a clickable link.</td></tr>
-            <tr><th scope="row"><strong>Parked</strong></th><td>Hides the post from public view (row is faded in this manager).</td></tr>
-            <tr><th scope="row"><strong>Move Feature</strong></th><td>Updates the post category and re-prefixes tags (e.g., <em>news-short</em> becomes <em>jobs-short</em>).</td></tr>
-            <tr><th scope="row"><strong>Stale Highlighting</strong></th><td>Yellow background for news <strong>>18 days old</strong> or events that have passed.</td></tr>
-        </table>
-    </div>
-    </div>
-    <style>.anm-row .row-actions { visibility: hidden; } .anm-row:hover .row-actions { visibility: visible; }</style>
     <script>
     jQuery(document).ready(function($) {
-        $('.anm-move-trigger').on('click', function(e){ e.preventDefault(); $(this).closest('td').find('.anm-move-panel').slideToggle(100); });
-        $('.anm-do-move').on('click', function(){
-            var btn = $(this);
-            btn.prop('disabled', true).text('...');
-            $.post(ajaxurl, {
-                action: 'anm_move_post',
-                post_id: btn.data('postid'),
-                dest_cat: btn.data('dest'),
-                nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>'
-            }, function(res) { if(res.success) { location.reload(); } });
+        // Toggle Panels
+        $('.anm-panel-trigger').on('click', function(e){ 
+            e.preventDefault(); 
+            var type = $(this).data('target');
+            $(this).closest('td').find('.anm-panel').hide(); // Hide others
+            $(this).closest('td').find('.anm-' + type + '-panel').slideDown(100); 
         });
+
+        // Close Panels
+        $('.anm-close-panel').on('click', function(e){ e.preventDefault(); $(this).closest('.anm-panel').slideUp(100); });
+        
+        // Execute Move
+        $('.anm-do-move').on('click', function(){
+            var btn = $(this); btn.prop('disabled', true).text('...');
+            $.post(ajaxurl, { action: 'anm_move_post', post_id: btn.data('postid'), dest_cat: btn.data('dest'), nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>' }, function(res) { if(res.success) { location.reload(); } });
+        });
+
+        // Execute Remove Tag (Notice only)
+        $('.anm-do-remove-notice').on('click', function(){
+            var btn = $(this); var pid = btn.data('postid'); btn.prop('disabled', true).text('Removing...');
+            $.post(ajaxurl, { action: 'anm_update_tag', post_id: pid, tag: 'none', cat_slug: btn.data('catslug'), nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>' }, function(res) { if(res.success) { $('#post-row-'+pid).fadeOut(); } });
+        });
+
+        // Execute Trash Post
+        $('.anm-do-trash-post').on('click', function(){
+            if(!confirm("Are you sure you want to move this post to the TRASH?")) return;
+            var btn = $(this); var pid = btn.data('postid'); btn.prop('disabled', true).text('Trashing...');
+            $.post(ajaxurl, { action: 'anm_trash_post', post_id: pid, nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>' }, function(res) { if(res.success) { $('#post-row-'+pid).fadeOut(); } });
+        });
+
+        // Tag Switcher
         $('.notice-tag-changer').on('change', function() {
             var $select = $(this), $spinner = $select.next('.spinner');
             $spinner.addClass('is-active');
-            $.post(ajaxurl, {
-                action: 'anm_update_tag',
-                post_id: $select.data('postid'),
-                tag: $select.val(),
-                cat_slug: $select.data('catslug'),
-                nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>'
-            }, function(res) { if(res.success) { location.reload(); } });
+            $.post(ajaxurl, { action: 'anm_update_tag', post_id: $select.data('postid'), tag: $select.val(), cat_slug: $select.data('catslug'), nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>' }, function(res) { if(res.success) { location.reload(); } });
         });
     });
     </script>
     <?php
 }
 
+add_action('wp_insert_post', function($post_id, $post, $update) {
+    if ($update) return; 
+    if (isset($_REQUEST['pre_cat'])) wp_set_post_categories($post_id, [intval($_REQUEST['pre_cat'])]);
+    if (isset($_REQUEST['pre_tag'])) wp_set_post_tags($post_id, sanitize_text_field($_REQUEST['pre_tag']), true);
+}, 10, 3);
+
+// AJAX handlers (unchanged from 3.4 logic)
 add_action('wp_ajax_anm_move_post', function() {
     check_ajax_referer('anm_nonce', 'nonce');
     $post_id = intval($_POST['post_id']);
@@ -198,14 +214,20 @@ add_action('wp_ajax_anm_update_tag', function() {
     $post_id = intval($_POST['post_id']);
     $cat_slug = sanitize_text_field($_POST['cat_slug']);
     $new_tag = sanitize_text_field($_POST['tag']);
-    $all_suffixes = ['full', 'short', 'list', 'parked', 'tag'];
-    $tags_to_strip = [];
-    foreach($all_suffixes as $s) { $tags_to_strip[] = $cat_slug . '-' . $s; }
+    $all_suffixes = ['full', 'short', 'list', 'parked'];
+    $tags_to_strip = []; foreach($all_suffixes as $s) { $tags_to_strip[] = $cat_slug . '-' . $s; }
     if (current_user_can('edit_post', $post_id)) {
         wp_remove_object_terms($post_id, $tags_to_strip, 'post_tag');
         if ($new_tag !== 'none') wp_set_post_terms($post_id, $new_tag, 'post_tag', true);
         wp_send_json_success();
     }
+    wp_send_json_error();
+});
+
+add_action('wp_ajax_anm_trash_post', function() {
+    check_ajax_referer('anm_nonce', 'nonce');
+    $post_id = intval($_POST['post_id']);
+    if (current_user_can('delete_post', $post_id)) { wp_trash_post($post_id); wp_send_json_success(); }
     wp_send_json_error();
 });
 
