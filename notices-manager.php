@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Advanced Notices Manager
- * Description: Categorized management with Introduction section, dynamic buttons, status badges, 18-day stale alerts, and Event Date sorting.
- * Version: 2.8
+ * Description: Categorized management with Introduction section, status badges, 18-day stale alerts, and AJAX category moving.
+ * Version: 3.0
  * Author: Gemini
  */
 
@@ -26,7 +26,6 @@ function anm_render_page() {
 
         $cat_name = esc_html($cat_obj->name);
         $cat_suffixes = ($cat_slug === 'introduction') ? ['full', 'parked'] : $suffixes;
-
         $cat_specific_tags = [];
         foreach ($cat_suffixes as $sfx) { $cat_specific_tags[] = $cat_slug . '-' . $sfx; }
 
@@ -73,17 +72,13 @@ function anm_render_page() {
                     $pub_date = get_the_date('U');
                     $e_date_raw = get_post_meta($post_id, 'event_start', true);
                     $e_date_ts = $e_date_raw ? strtotime($e_date_raw) : false;
-                    
                     $current_tags = wp_get_post_tags($post_id, ['fields' => 'slugs']);
                     $active_tag = reset(array_intersect($current_tags, $cat_specific_tags));
-
-                    // Updated Stale Logic: 18 Days or Event Date Passed
+                    
                     $is_stale = (($today - $pub_date) > (18 * DAY_IN_SECONDS)) || ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today);
                     $is_parked = (strpos($active_tag, '-parked') !== false);
 
-                    $row_style = '';
-                    if ($is_parked) $row_style = 'opacity: 0.7; background-color: #f6f7f7;';
-                    elseif ($is_stale) $row_style = 'background-color: #fff8e5;';
+                    $row_style = $is_parked ? 'opacity: 0.7; background-color: #f6f7f7;' : ($is_stale ? 'background-color: #fff8e5;' : '');
                 ?>
                 <tr style="<?php echo $row_style; ?>" class="anm-row">
                     <td class="column-title has-row-actions">
@@ -92,22 +87,26 @@ function anm_render_page() {
                             if ($status !== 'publish') {
                                 $status_labels = ['draft' => 'Draft', 'future' => 'Scheduled', 'pending' => 'Pending', 'private' => 'Private'];
                                 $label = isset($status_labels[$status]) ? $status_labels[$status] : ucfirst($status);
-                                $color = ($status === 'private') ? '#d63638' : (($status === 'future') ? '#2271b1' : '#646970');
-                                echo " — <span style='color:$color; font-weight:600; font-size:11px;'>$label</span>";
+                                echo " — <span style='color:#2271b1; font-weight:600; font-size:11px;'>$label</span>";
                             }
                             if($is_parked) echo ' — <span style="color:#666; font-size:10px; font-weight:bold;">[PARKED]</span>';
                             elseif($is_stale) echo ' — <span style="color:#d63638; font-size:10px; font-weight:bold;">[STALE]</span>'; 
                         ?>
                         <div class="row-actions">
                             <span class="edit"><a href="<?php echo get_edit_post_link(); ?>">Edit</a> | </span>
+                            <span class="move"><a href="#" class="anm-move-trigger" style="color:#2271b1;">Move</a> | </span>
                             <span class="clone"><a href="<?php echo wp_nonce_url(admin_url("admin-ajax.php?action=anm_clone_post&post_id=$post_id"), 'anm_clone_nonce'); ?>" onclick="return confirm('Clone to new draft?')">Clone</a> | </span>
                             <span class="view"><a href="<?php the_permalink(); ?>" target="_blank">View</a> | </span>
                             <span class="trash"><a href="<?php echo get_delete_post_link($post_id); ?>" class="submitdelete" style="color:#d63638;">Bin</a></span>
                         </div>
+                        <div class="anm-move-panel" style="display:none; margin-top:5px; padding:10px; background:#f0f0f1; border-radius:3px; border:1px solid #ccd0d4;">
+                            <small><strong>Move to Category:</strong></small><br>
+                            <?php foreach($categories as $dest): if($dest === $cat_slug) continue; ?>
+                                <button class="button button-small anm-do-move" data-postid="<?php echo $post_id; ?>" data-dest="<?php echo $dest; ?>" style="margin-top:4px;"><?php echo ucfirst($dest); ?></button>
+                            <?php endforeach; ?>
+                        </div>
                     </td>
-                    <?php if($cat_slug === 'events'): ?>
-                        <td><strong><?php echo $e_date_raw ? date('d/m/Y', $e_date_ts) : '—'; ?></strong></td>
-                    <?php endif; ?>
+                    <?php if($cat_slug === 'events'): ?><td><strong><?php echo $e_date_raw ? date('d/m/Y', $e_date_ts) : '—'; ?></strong></td><?php endif; ?>
                     <td><?php echo get_the_date('d/m/Y'); ?></td>
                     <?php if($cat_slug !== 'introduction'): ?>
                         <td style="text-align:center;"><?php echo has_post_thumbnail() ? '✔' : '<span style="color:red;">✘</span>'; ?></td>
@@ -116,9 +115,7 @@ function anm_render_page() {
                     <td>
                         <select class="notice-tag-changer" data-postid="<?php the_ID(); ?>" data-catslug="<?php echo $cat_slug; ?>">
                             <option value="none">— Remove Tag —</option>
-                            <?php foreach ($cat_suffixes as $sfx) : 
-                                $tag_value = $cat_slug . '-' . $sfx;
-                            ?>
+                            <?php foreach ($cat_suffixes as $sfx) : $tag_value = $cat_slug . '-' . $sfx; ?>
                                 <option value="<?php echo $tag_value; ?>" <?php selected($active_tag, $tag_value); ?>><?php echo ucfirst($sfx); ?></option>
                             <?php endforeach; ?>
                         </select>
@@ -126,7 +123,7 @@ function anm_render_page() {
                     </td>
                 </tr>
                 <?php endwhile; wp_reset_postdata(); else : ?>
-                <tr><td colspan="7">No notices found in this category.</td></tr>
+                <tr><td colspan="7">No notices found.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -136,16 +133,29 @@ function anm_render_page() {
     <div style="margin-top: 50px; padding: 20px; background: #fff; border: 1px solid #ccd0d4; border-radius: 4px; max-width: 800px;">
         <h3 style="margin-top: 0;"><span class="dashicons dashicons-editor-help" style="vertical-align: middle; margin-right: 5px;"></span> Reference Guide</h3>
         <table class="form-table">
-            <tr><th scope="row"><strong>Statuses</strong></th><td><span style="color:#646970; font-weight:bold;">Draft/Pending</span>, <span style="color:#2271b1; font-weight:bold;">Scheduled</span>, <span style="color:#d63638; font-weight:bold;">Private</span>.</td></tr>
-            <tr><th scope="row"><strong>Full/Short/List</strong></th><td>Determines if the full text, excerpt, or link appears in notices.</td></tr>
-            <tr><th scope="row"><strong>Parked</strong></th><td>Post is "parked" for later publication; row is faded out in manager.</td></tr>
-            <tr><th scope="row"><strong>Stale Posts</strong></th><td>Highlighted in <span style="background:#fff8e5; padding: 2px 5px; border: 1px solid #ccd0d4;">yellow</span>. News > 18 days old or past events.</td></tr>
+            <tr><th scope="row" style="width: 150px;"><strong>Full</strong></th><td>The full post text will be displayed in the notices.</td></tr>
+            <tr><th scope="row"><strong>Short</strong></th><td>Only the post excerpt will be shown with a "Read More" button.</td></tr>
+            <tr><th scope="row"><strong>List</strong></th><td>Only the title will be shown as a clickable link.</td></tr>
+            <tr><th scope="row"><strong>Parked</strong></th><td>Hides the post from public view (row is faded in this manager).</td></tr>
+            <tr><th scope="row"><strong>Move Feature</strong></th><td>Updates the post category and re-prefixes tags (e.g., <em>news-short</em> becomes <em>jobs-short</em>).</td></tr>
+            <tr><th scope="row"><strong>Stale Highlighting</strong></th><td>Yellow background for news <strong>>18 days old</strong> or events that have passed.</td></tr>
         </table>
     </div>
     </div>
     <style>.anm-row .row-actions { visibility: hidden; } .anm-row:hover .row-actions { visibility: visible; }</style>
     <script>
     jQuery(document).ready(function($) {
+        $('.anm-move-trigger').on('click', function(e){ e.preventDefault(); $(this).closest('td').find('.anm-move-panel').slideToggle(100); });
+        $('.anm-do-move').on('click', function(){
+            var btn = $(this);
+            btn.prop('disabled', true).text('...');
+            $.post(ajaxurl, {
+                action: 'anm_move_post',
+                post_id: btn.data('postid'),
+                dest_cat: btn.data('dest'),
+                nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>'
+            }, function(res) { if(res.success) { location.reload(); } });
+        });
         $('.notice-tag-changer').on('change', function() {
             var $select = $(this), $spinner = $select.next('.spinner');
             $spinner.addClass('is-active');
@@ -155,18 +165,33 @@ function anm_render_page() {
                 tag: $select.val(),
                 cat_slug: $select.data('catslug'),
                 nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>'
-            }, function(res) { 
-                $spinner.removeClass('is-active');
-                if(res.success) {
-                    if($select.val() === 'none') { $select.closest('tr').fadeOut(600, function(){ $(this).remove(); }); } 
-                    else { location.reload(); }
-                }
-            });
+            }, function(res) { if(res.success) { location.reload(); } });
         });
     });
     </script>
     <?php
 }
+
+add_action('wp_ajax_anm_move_post', function() {
+    check_ajax_referer('anm_nonce', 'nonce');
+    $post_id = intval($_POST['post_id']);
+    $dest_slug = sanitize_text_field($_POST['dest_cat']);
+    if (!current_user_can('edit_post', $post_id)) wp_send_json_error();
+    $cat = get_category_by_slug($dest_slug);
+    if ($cat) wp_set_post_categories($post_id, [$cat->term_id]);
+    $all_slugs = ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'];
+    $current_tags = wp_get_post_tags($post_id);
+    foreach($current_tags as $tag) {
+        foreach($all_slugs as $slug) {
+            if(strpos($tag->slug, $slug . '-') === 0) {
+                $suffix = str_replace($slug . '-', '', $tag->slug);
+                wp_remove_object_terms($post_id, $tag->term_id, 'post_tag');
+                wp_set_post_terms($post_id, $dest_slug . '-' . $suffix, 'post_tag', true);
+            }
+        }
+    }
+    wp_send_json_success();
+});
 
 add_action('wp_ajax_anm_update_tag', function() {
     check_ajax_referer('anm_nonce', 'nonce');
@@ -178,7 +203,7 @@ add_action('wp_ajax_anm_update_tag', function() {
     foreach($all_suffixes as $s) { $tags_to_strip[] = $cat_slug . '-' . $s; }
     if (current_user_can('edit_post', $post_id)) {
         wp_remove_object_terms($post_id, $tags_to_strip, 'post_tag');
-        if ($new_tag !== 'none') { wp_set_post_terms($post_id, $new_tag, 'post_tag', true); }
+        if ($new_tag !== 'none') wp_set_post_terms($post_id, $new_tag, 'post_tag', true);
         wp_send_json_success();
     }
     wp_send_json_error();
@@ -188,21 +213,11 @@ add_action('wp_ajax_anm_clone_post', function() {
     check_admin_referer('anm_clone_nonce');
     $post_id = intval($_GET['post_id']);
     $post = get_post($post_id);
-    if (!$post) wp_die("Post not found.");
     $new_id = wp_insert_post(['post_title'=>$post->post_title.' (Copy)','post_content'=>$post->post_content,'post_excerpt'=>$post->post_excerpt,'post_status'=>'draft','post_type'=>$post->post_type]);
     $taxonomies = get_object_taxonomies($post->post_type);
-    foreach ($taxonomies as $tax) {
-        $terms = wp_get_object_terms($post_id, $tax, ['fields' => 'ids']);
-        wp_set_object_terms($new_id, $terms, $tax);
-    }
+    foreach ($taxonomies as $tax) { $terms = wp_get_object_terms($post_id, $tax, ['fields' => 'ids']); wp_set_object_terms($new_id, $terms, $tax); }
     $meta = get_post_custom($post_id);
     foreach ($meta as $key => $values) { foreach ($values as $value) add_post_meta($new_id, $key, maybe_unserialize($value)); }
     wp_redirect(admin_url('post.php?action=edit&post=' . $new_id));
     exit;
 });
-
-add_action('wp_insert_post', function($post_id, $post, $update) {
-    if ($update) return;
-    if (isset($_REQUEST['pre_cat'])) wp_set_post_categories($post_id, [intval($_REQUEST['pre_cat'])]);
-    if (isset($_REQUEST['pre_tag'])) wp_set_post_tags($post_id, sanitize_text_field($_REQUEST['pre_tag']), true);
-}, 10, 3);
