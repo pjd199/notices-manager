@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: Advanced Notices Manager
- * Description: Management with Inline Move/Clone/Bin panels, 18-day stale alerts, and smart tag removal.
- * Version: 3.6
- * Author: Gemini
+ * Description: Notice manager designed for Horsham Churches Together
+ * Version: 3.6.1
+ * Author: Pete Dibdin and Gemini
  */
 
 if (!defined('ABSPATH')) exit;
@@ -78,7 +78,7 @@ function anm_render_page() {
                     
                     $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > (18 * DAY_IN_SECONDS))) || ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today);
                     $is_parked = (strpos($active_tag, '-parked') !== false);
-                    $row_style = $is_parked ? 'opacity: 0.7; background-color: #f6f7f7;' : ($is_stale ? 'background-color: #fff8e5;' : '');
+                    $row_style = $is_parked ? 'opacity: 0.7; background-color: #f6f7f7;' : ($is_stale ? 'background-color: #f75d20;' : '');
                 ?>
                 <tr style="<?php echo $row_style; ?>" class="anm-row" id="post-row-<?php echo $post_id; ?>">
                     <td class="column-title has-row-actions">
@@ -243,4 +243,5 @@ add_action('wp_ajax_anm_clone_post', function() {
     wp_redirect(admin_url('post.php?action=edit&post=' . $new_id));
     exit;
 });
+
 
