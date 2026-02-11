@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 3.6.1
+ * Version: 3.6.2
  * Author: Pete Dibdin and Gemini
  */
 
@@ -78,7 +78,7 @@ function anm_render_page() {
                     
                     $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > (18 * DAY_IN_SECONDS))) || ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today);
                     $is_parked = (strpos($active_tag, '-parked') !== false);
-                    $row_style = $is_parked ? 'opacity: 0.7; background-color: #f6f7f7;' : ($is_stale ? 'background-color: #f75d20;' : '');
+                    $row_style = $is_parked ? 'opacity: 0.7; background-color: #f6f7f7;' : ($is_stale ? 'background-color: #f59b78;' : '');
                 ?>
                 <tr style="<?php echo $row_style; ?>" class="anm-row" id="post-row-<?php echo $post_id; ?>">
                     <td class="column-title has-row-actions">
@@ -243,5 +243,6 @@ add_action('wp_ajax_anm_clone_post', function() {
     wp_redirect(admin_url('post.php?action=edit&post=' . $new_id));
     exit;
 });
+
 
 
