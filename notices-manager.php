@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Management with Inline Move/Clone/Bin panels, 18-day stale alerts, and smart tag removal.
- * Version: 3.5
+ * Version: 3.6
  * Author: Gemini
  */
 
@@ -76,7 +76,7 @@ function anm_render_page() {
                     $current_tags = wp_get_post_tags($post_id, ['fields' => 'slugs']);
                     $active_tag = reset(array_intersect($current_tags, $cat_specific_tags));
                     
-                    $is_stale = (($today - $pub_date) > (18 * DAY_IN_SECONDS)) || ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today);
+                    $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > (18 * DAY_IN_SECONDS))) || ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today);
                     $is_parked = (strpos($active_tag, '-parked') !== false);
                     $row_style = $is_parked ? 'opacity: 0.7; background-color: #f6f7f7;' : ($is_stale ? 'background-color: #fff8e5;' : '');
                 ?>
@@ -243,3 +243,4 @@ add_action('wp_ajax_anm_clone_post', function() {
     wp_redirect(admin_url('post.php?action=edit&post=' . $new_id));
     exit;
 });
+
