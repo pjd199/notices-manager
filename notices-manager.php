@@ -181,6 +181,39 @@ function anm_render_page() {
     <?php
 }
 
+/**
+ * Custom helper to purge LiteSpeed cache for specific notice-related pages.
+ */
+function anm_purge_notice_caches($post_id) {
+    clean_post_cache($post_id);
+
+    if (function_exists('wp_cache_flush_group')) {
+        wp_cache_flush_group('posts');
+    }
+    
+    if (!defined('LSCWP_V')) {
+        return; // LiteSpeed isn't active, do nothing.
+    }
+
+    // 1. Purge the individual post itself
+    do_action('litespeed_purge_post', $post_id);
+
+    // 2. Define the specific notice-related URLs to clear
+    $pages_to_clear = [
+        '/'
+        '/notices/',
+        '/news/',
+        '/events/'
+    ];
+
+    foreach ($pages_to_clear as $path) {
+        $url = home_url($path);
+        do_action('litespeed_purge_url', $url);
+    }
+    
+    // Optional: If you use LiteSpeed "Tags", you could also use:
+    // do_action('litespeed_purge_tag', 'notices_tag');
+}
 add_action('wp_insert_post', function($post_id, $post, $update) {
     if ($update) return; 
     if (isset($_REQUEST['pre_cat'])) wp_set_post_categories($post_id, [intval($_REQUEST['pre_cat'])]);
@@ -206,7 +239,7 @@ add_action('wp_ajax_anm_move_post', function() {
             }
         }
     }
-    clean_post_cache($post_id);
+    anm_purge_notice_caches($post_id);
     wp_send_json_success();
 });
 
@@ -220,7 +253,7 @@ add_action('wp_ajax_anm_update_tag', function() {
     if (current_user_can('edit_post', $post_id)) {
         wp_remove_object_terms($post_id, $tags_to_strip, 'post_tag');
         if ($new_tag !== 'none') wp_set_post_terms($post_id, $new_tag, 'post_tag', true);
-        clean_post_cache($post_id);
+        anm_purge_notice_caches($post_id);
         wp_send_json_success();
     }
     wp_send_json_error();
@@ -231,7 +264,7 @@ add_action('wp_ajax_anm_trash_post', function() {
     $post_id = intval($_POST['post_id']);
     if (current_user_can('delete_post', $post_id)) {
         wp_trash_post($post_id); 
-        clean_post_cache($post_id); 
+        anm_purge_notice_caches($post_id);
         wp_send_json_success(); 
     }
     wp_send_json_error();
@@ -246,9 +279,11 @@ add_action('wp_ajax_anm_clone_post', function() {
     foreach ($taxonomies as $tax) { $terms = wp_get_object_terms($post_id, $tax, ['fields' => 'ids']); wp_set_object_terms($new_id, $terms, $tax); }
     $meta = get_post_custom($post_id);
     foreach ($meta as $key => $values) { foreach ($values as $value) add_post_meta($new_id, $key, maybe_unserialize($value)); }
+    anm_purge_notice_caches($post_id);
     wp_redirect(admin_url('post.php?action=edit&post=' . $new_id));
     exit;
 });
+
 
 
 
