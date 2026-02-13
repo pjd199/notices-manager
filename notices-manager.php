@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 3.6.2
+ * Version: 3.6.3
  * Author: Pete Dibdin and Gemini
  */
 
@@ -206,6 +206,7 @@ add_action('wp_ajax_anm_move_post', function() {
             }
         }
     }
+    clean_post_cache($post_id);
     wp_send_json_success();
 });
 
@@ -219,6 +220,7 @@ add_action('wp_ajax_anm_update_tag', function() {
     if (current_user_can('edit_post', $post_id)) {
         wp_remove_object_terms($post_id, $tags_to_strip, 'post_tag');
         if ($new_tag !== 'none') wp_set_post_terms($post_id, $new_tag, 'post_tag', true);
+        clean_post_cache($post_id);
         wp_send_json_success();
     }
     wp_send_json_error();
@@ -227,7 +229,11 @@ add_action('wp_ajax_anm_update_tag', function() {
 add_action('wp_ajax_anm_trash_post', function() {
     check_ajax_referer('anm_nonce', 'nonce');
     $post_id = intval($_POST['post_id']);
-    if (current_user_can('delete_post', $post_id)) { wp_trash_post($post_id); wp_send_json_success(); }
+    if (current_user_can('delete_post', $post_id)) {
+        wp_trash_post($post_id); 
+        clean_post_cache($post_id); 
+        wp_send_json_success(); 
+    }
     wp_send_json_error();
 });
 
@@ -243,6 +249,7 @@ add_action('wp_ajax_anm_clone_post', function() {
     wp_redirect(admin_url('post.php?action=edit&post=' . $new_id));
     exit;
 });
+
 
 
 
