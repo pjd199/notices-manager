@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 3.6.3
+ * Version: 3.6.4
  * Author: Pete Dibdin and Gemini
  */
 
@@ -283,6 +283,7 @@ add_action('wp_ajax_anm_clone_post', function() {
     wp_redirect(admin_url('post.php?action=edit&post=' . $new_id));
     exit;
 });
+
 
 
 
