@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 3.6.4
- * Author: Pete Dibdin and Gemini
+ * Version: 3.6.6
+ * Author: Pete Dibdin
  */
 
 if (!defined('ABSPATH')) exit;
@@ -200,7 +200,7 @@ function anm_purge_notice_caches($post_id) {
 
     // 2. Define the specific notice-related URLs to clear
     $pages_to_clear = [
-        '/'
+        '/',
         '/notices/',
         '/news/',
         '/events/'
@@ -210,9 +210,6 @@ function anm_purge_notice_caches($post_id) {
         $url = home_url($path);
         do_action('litespeed_purge_url', $url);
     }
-    
-    // Optional: If you use LiteSpeed "Tags", you could also use:
-    // do_action('litespeed_purge_tag', 'notices_tag');
 }
 add_action('wp_insert_post', function($post_id, $post, $update) {
     if ($update) return; 
@@ -283,6 +280,7 @@ add_action('wp_ajax_anm_clone_post', function() {
     wp_redirect(admin_url('post.php?action=edit&post=' . $new_id));
     exit;
 });
+
 
 
 
