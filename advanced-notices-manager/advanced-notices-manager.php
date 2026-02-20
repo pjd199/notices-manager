@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Pete Dibdin
  */
 
@@ -116,7 +116,26 @@ function anm_render_page() {
                     <?php if($cat_slug === 'events'): ?><td><strong><?php echo $e_date_raw ? date('d/m/Y', $e_date_ts) : '—'; ?></strong></td><?php endif; ?>
                     <td><?php echo get_the_date('d/m/Y'); ?></td>
                     <?php if($cat_slug !== 'introduction'): ?>
-                        <td style="text-align:center;"><?php echo has_post_thumbnail() ? '✔' : '<span style="color:red;">✘</span>'; ?></td>
+                        <td style="text-align:center;">
+                            <?php 
+                                if (has_post_thumbnail()) {
+                                    $img_data = wp_get_attachment_image_src(get_post_thumbnail_id($post_id), 'full');
+                                    if ($img_data) {
+                                        $w = $img_data[1];
+                                        $h = $img_data[2];
+                                        $ratio = ($h > 0) ? ($w / $h) : 0;
+                                        // Check for 16:9 (1.777) with small tolerance
+                                        if (abs($ratio - (16/9)) < 0.02) {
+                                            echo '<span style="color:green;">✔</span>';
+                                        } else {
+                                            echo '<span style="color:orange;" title="Wrong Ratio: ' . round($ratio, 2) . ':1">⚠️</span>';
+                                        }
+                                    }
+                                } else {
+                                    echo '<span style="color:red;">✘</span>';
+                                }
+                            ?>
+                        </td>
                         <td style="text-align:center;"><?php echo has_excerpt() ? '✔' : '<span style="color:red;">✘</span>'; ?></td>
                     <?php endif; ?>
                     <td>
@@ -280,6 +299,7 @@ add_action('wp_ajax_anm_clone_post', function() {
     wp_redirect(admin_url('post.php?action=edit&post=' . $new_id));
     exit;
 });
+
 
 
 
