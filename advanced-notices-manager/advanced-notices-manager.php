@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.2
+ * Version: 1.0.3
  * Author: Pete Dibdin
  */
 
@@ -313,9 +313,9 @@ add_filter('cron_schedules', function($schedules) {
 register_activation_hook(__FILE__, 'anm_schedule_expired_events_cleanup');
 function anm_schedule_expired_events_cleanup() {
     if (!wp_next_scheduled('anm_expired_events_cleanup')) {
-        // Calculate next 12:01 in site's local time
+        // Calculate next 00:01 in site's local time
         $timezone = wp_timezone();
-        $next_run = new DateTime('today 12:01', $timezone);
+        $next_run = new DateTime('today 00:01', $timezone);
         if ($next_run->getTimestamp() <= time()) {
             $next_run->modify('+1 day');
         }
@@ -369,3 +369,4 @@ function anm_do_expired_events_cleanup() {
 
     wp_reset_postdata();
 }
+
