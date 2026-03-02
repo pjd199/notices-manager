@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Pete Dibdin
  */
 
@@ -300,10 +300,72 @@ add_action('wp_ajax_anm_clone_post', function() {
     exit;
 });
 
+/**
+ * Scheduled Task: Remove tags from expired events daily at 12:01
+ */
 
+// Register a custom daily schedule at 12:01
+add_filter('cron_schedules', function($schedules) {
+    return $schedules; // We'll use WP's built-in 'daily', offset via wp_schedule_event
+});
 
+// Hook to run on activation
+register_activation_hook(__FILE__, 'anm_schedule_expired_events_cleanup');
+function anm_schedule_expired_events_cleanup() {
+    if (!wp_next_scheduled('anm_expired_events_cleanup')) {
+        // Calculate next 12:01 in site's local time
+        $timezone = wp_timezone();
+        $next_run = new DateTime('today 12:01', $timezone);
+        if ($next_run->getTimestamp() <= time()) {
+            $next_run->modify('+1 day');
+        }
+        wp_schedule_event($next_run->getTimestamp(), 'daily', 'anm_expired_events_cleanup');
+    }
+}
 
+// Hook to clear on deactivation
+register_deactivation_hook(__FILE__, function() {
+    wp_clear_scheduled_hook('anm_expired_events_cleanup');
+});
 
+// The actual cleanup task
+add_action('anm_expired_events_cleanup', 'anm_do_expired_events_cleanup');
+function anm_do_expired_events_cleanup() {
+    $today = strtotime('today');
+    $controlled_tags = ['events-full', 'events-short', 'events-list', 'events-parked'];
 
+    $args = [
+        'post_type'      => 'post',
+        'posts_per_page' => -1,
+        'post_status'    => ['publish', 'pending', 'draft', 'future', 'private'],
+        'category_name'  => 'events',
+        'tax_query'      => [[
+            'taxonomy' => 'post_tag',
+            'field'    => 'slug',
+            'terms'    => $controlled_tags,
+        ]],
+        'meta_query'     => [[
+            'key'     => 'event_start',
+            'value'   => date('Y-m-d', $today),
+            'compare' => '<',
+            'type'    => 'DATE',
+        ]],
+    ];
 
+    $query = new WP_Query($args);
 
+    if (!$query->have_posts()) return;
+
+    while ($query->have_posts()) {
+        $query->the_post();
+        $post_id = get_the_ID();
+
+        // Strip all controlled tags
+        wp_remove_object_terms($post_id, $controlled_tags, 'post_tag');
+
+        // Purge caches
+        anm_purge_notice_caches($post_id);
+    }
+
+    wp_reset_postdata();
+}
