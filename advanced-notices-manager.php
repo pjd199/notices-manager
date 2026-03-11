@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.5
+ * Version: 1.0.6
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
@@ -104,7 +104,8 @@ function anm_render_page() {
                             <span class="move"><a href="#" class="anm-panel-trigger" data-target="move" style="color:#2271b1;">Move</a> | </span>
                             <span class="clone"><a href="<?php echo wp_nonce_url(admin_url("admin-ajax.php?action=anm_clone_post&post_id=$post_id"), 'anm_clone_nonce'); ?>" onclick="return confirm('Clone to new draft?')">Clone</a> | </span>
                             <span class="view"><a href="<?php the_permalink(); ?>" target="_blank">View</a> | </span>
-                            <span class="trash"><a href="#" class="anm-panel-trigger" data-target="bin" style="color:#d63638;">Bin</a></span>
+                            <span class="archive"><a href="#" class="anm-do-remove-notice" data-postid="<?php echo $post_id; ?>" data-catslug="<?php echo $cat_slug; ?>" style="color:#2271b1;">Archive</a> | </span>
+                            <span class="trash"><a href="#" class="anm-do-trash-post" data-postid="<?php echo $post_id; ?>" style="color:#d63638;">Bin</a></span>
                         </div>
 
                         <div class="anm-panel anm-move-panel" style="display:none; margin-top:5px; padding:10px; background:#f0f0f1; border-radius:3px; border:1px solid #ccd0d4; position:relative;">
@@ -113,13 +114,6 @@ function anm_render_page() {
                             <?php foreach($categories as $dest): if($dest === $cat_slug) continue; ?>
                                 <button class="button button-small anm-do-move" data-postid="<?php echo $post_id; ?>" data-dest="<?php echo $dest; ?>" style="margin-top:4px;"><?php echo ucfirst($dest); ?></button>
                             <?php endforeach; ?>
-                        </div>
-
-                        <div class="anm-panel anm-bin-panel" style="display:none; margin-top:5px; padding:10px; background:#fdf2f2; border-radius:3px; border:1px solid #d63638; position:relative;">
-                            <a href="#" class="anm-close-panel" style="position:absolute; right:8px; top:5px; text-decoration:none; color:#d63638; font-weight:bold;">[X]</a>
-                            <small><strong>Bin Action:</strong></small><br>
-                            <button class="button button-small anm-do-remove-notice" data-postid="<?php echo $post_id; ?>" data-catslug="<?php echo $cat_slug; ?>" style="margin-top:4px;">Remove from Notices</button>
-                            <button class="button button-small anm-do-trash-post" data-postid="<?php echo $post_id; ?>" style="margin-top:4px; color:#d63638; border-color:#d63638;">Move to Trash</button>
                         </div>
                     </td>
                     <?php if($cat_slug === 'events'): ?><td><strong><?php echo $e_date_raw ? date('d/m/Y', $e_date_ts) : '—'; ?></strong></td><?php endif; ?>
@@ -185,17 +179,40 @@ function anm_render_page() {
             $.post(ajaxurl, { action: 'anm_move_post', post_id: btn.data('postid'), dest_cat: btn.data('dest'), nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>' }, function(res) { if(res.success) { location.reload(); } });
         });
 
-        // Execute Remove Tag (Notice only)
-        $('.anm-do-remove-notice').on('click', function(){
-            var btn = $(this); var pid = btn.data('postid'); btn.prop('disabled', true).text('Removing...');
-            $.post(ajaxurl, { action: 'anm_update_tag', post_id: pid, tag: 'none', cat_slug: btn.data('catslug'), nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>' }, function(res) { if(res.success) { $('#post-row-'+pid).fadeOut(); } });
+        // Execute Archive (Remove Tag)
+        $('.anm-do-remove-notice').on('click', function(e){
+            e.preventDefault();
+            var btn = $(this); 
+            var pid = btn.data('postid'); 
+            btn.css('opacity', '0.5').text('Archiving...');
+            
+            $.post(ajaxurl, { 
+                action: 'anm_update_tag', 
+                post_id: pid, 
+                tag: 'none', 
+                cat_slug: btn.data('catslug'), 
+                nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>' 
+            }, function(res) { 
+                if(res.success) { $('#post-row-'+pid).fadeOut(); } 
+            });
         });
 
-        // Execute Trash Post
-        $('.anm-do-trash-post').on('click', function(){
-            if(!confirm("Are you sure you want to move this post to the TRASH?")) return;
-            var btn = $(this); var pid = btn.data('postid'); btn.prop('disabled', true).text('Trashing...');
-            $.post(ajaxurl, { action: 'anm_trash_post', post_id: pid, nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>' }, function(res) { if(res.success) { $('#post-row-'+pid).fadeOut(); } });
+        // Execute Trash Post (The double-check)
+        $('.anm-do-trash-post').on('click', function(e){
+            e.preventDefault();
+            if(!confirm("Are you sure you want to move this post to the TRASH? This removes it from the website entirely.")) return;
+            
+            var btn = $(this); 
+            var pid = btn.data('postid'); 
+            btn.css('opacity', '0.5').text('Trashing...');
+            
+            $.post(ajaxurl, { 
+                action: 'anm_trash_post', 
+                post_id: pid, 
+                nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>' 
+            }, function(res) { 
+                if(res.success) { $('#post-row-'+pid).fadeOut(); } 
+            });
         });
 
         // Tag Switcher
