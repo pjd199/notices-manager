@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.4
+ * Version: 1.0.5
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
@@ -20,7 +20,14 @@ function anm_render_page() {
     $suffixes = ['full', 'short', 'list', 'parked'];
     $today = strtotime('today');
     
-    echo '<div class="wrap"><h1 class="wp-heading-inline">Notices Manager</h1>';
+    echo '<style>
+        /* Hide LiteSpeed Success/Purge notices only on this page */
+        .anm-wrap ~ .litespeed_icon.notice-success,
+        .litespeed_icon.notice-success { 
+            display: none !important; 
+        }
+    </style>';
+    echo '<div class="anm-wrap"><h1 class="wp-heading-inline">Notices Manager</h1>';
     echo '<a href="' . home_url('/notices') . '" class="page-title-action" target="_blank">View Notices Page</a>';
     echo '<hr class="wp-header-end">';
 
@@ -65,7 +72,7 @@ function anm_render_page() {
                         <th style="width: 70px; text-align:center;">Image</th>
                         <th style="width: 70px; text-align:center;">Excerpt</th>
                     <?php endif; ?>
-                    <th style="width: 180px;">Tag Switcher</th>
+                    <th style="width: 180px;">Display Style</th>
                 </tr>
             </thead>
             <tbody>

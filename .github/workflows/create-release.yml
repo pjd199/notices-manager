@@ -20,8 +20,8 @@ jobs:
       - name: Get Plugin Version
         id: get_version
         run: |
-          # Look for version in src/[plugin-slug].php
-          VERSION=$(grep -m 1 "Version:" src/${{ env.PLUGIN_SLUG }}.php | awk '{print $NF}' | tr -d '\r')
+          # Look for version in [plugin-slug].php
+          VERSION=$(grep -m 1 "Version:" ${{ env.PLUGIN_SLUG }}.php | awk '{print $NF}' | tr -d '\r')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
@@ -44,7 +44,7 @@ jobs:
           mkdir -p ${{ env.PLUGIN_SLUG }}
           
           # Copy all source files into that folder
-          cp -r src/* ${{ env.PLUGIN_SLUG }}/
+          cp -r ${{ env.PLUGIN_SLUG }}.php ${{ env.PLUGIN_SLUG }}/
           
           # Include root README if available
           if [ -f README.md ]; then cp README.md ${{ env.PLUGIN_SLUG }}/; fi
@@ -63,10 +63,3 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Post-Cleanup
-        if: always()
-        run: |
-          # Clean up the runner workspace
-          rm -rf ${{ env.PLUGIN_SLUG }}
-          rm -f ${{ env.PLUGIN_SLUG }}.zip
