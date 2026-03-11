@@ -336,9 +336,9 @@ add_filter('cron_schedules', function($schedules) {
 });
 
 // Hook to run on activation
-register_activation_hook(__FILE__, 'anm_schedule_expired_events_cleanup');
-function anm_schedule_expired_events_cleanup() {
-    if (!wp_next_scheduled('anm_expired_events_cleanup')) {
+register_activation_hook(__FILE__, 'anm_schedule_expired_cleanup');
+function anm_schedule_expired_cleanup() {
+    if (!wp_next_scheduled('anm_expired_cleanup')) {
         // Calculate next 00:01 in site's local time
         $timezone = wp_timezone();
         $next_run = new DateTime('today 00:01', $timezone);
@@ -351,31 +351,47 @@ function anm_schedule_expired_events_cleanup() {
 
 // Hook to clear on deactivation
 register_deactivation_hook(__FILE__, function() {
-    wp_clear_scheduled_hook('anm_expired_events_cleanup');
+    wp_clear_scheduled_hook('anm_expired_cleanup');
 });
 
 // The actual cleanup task
-add_action('anm_expired_events_cleanup', 'anm_do_expired_events_cleanup');
-function anm_do_expired_events_cleanup() {
-    $today = strtotime('today');
-    $controlled_tags = ['events-full', 'events-short', 'events-list', 'events-parked'];
+add_action('anm_expired_cleanup', 'anm_do_expired_cleanup');
+function anm_do_expired_cleanup() {
+    $today = date('Y-m-d'); // Current date in ISO format for reliable comparison
+    $controlled_tags = [
+        'introduction-full', 'introduction-parked',
+        'news-full', 'news-short', 'news-list', 'news-parked',
+        'events-full', 'events-short', 'events-list', 'events-parked',
+        'prayer-full', 'prayer-short', 'prayer-list', 'prayer-parked',
+        'jobs-full', 'jobs-short', 'jobs-list', 'jobs-parked',
+        'volunteering-full', 'volunteering-short', 'volunteering-list', 'volunteering-parked'
+    ];
 
     $args = [
         'post_type'      => 'post',
         'posts_per_page' => -1,
         'post_status'    => ['publish', 'pending', 'draft', 'future', 'private'],
-        'category_name'  => 'events',
+        // We remove 'category_name' => 'events' so it checks ALL categories for the 'expires' field
         'tax_query'      => [[
             'taxonomy' => 'post_tag',
             'field'    => 'slug',
             'terms'    => $controlled_tags,
         ]],
-        'meta_query'     => [[
-            'key'     => 'event_start',
-            'value'   => date('Y-m-d', $today),
-            'compare' => '<',
-            'type'    => 'DATE',
-        ]],
+        'meta_query'     => [
+            'relation' => 'OR',
+            [
+                'key'     => 'event_start',
+                'value'   => $today,
+                'compare' => '<',
+                'type'    => 'DATE',
+            ],
+            [
+                'key'     => 'expires',
+                'value'   => $today,
+                'compare' => '<',
+                'type'    => 'DATE',
+            ],
+        ],
     ];
 
     $query = new WP_Query($args);
@@ -386,14 +402,13 @@ function anm_do_expired_events_cleanup() {
         $query->the_post();
         $post_id = get_the_ID();
 
-        // Strip all controlled tags
+        // Strip the tags to "Archive" the post from the manager
         wp_remove_object_terms($post_id, $controlled_tags, 'post_tag');
 
-        // Purge caches
+        // Purge caches so the site updates immediately
         anm_purge_notice_caches($post_id);
     }
 
     wp_reset_postdata();
 }
-
 
