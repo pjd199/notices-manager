@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.11
+ * Version: 1.0.12
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
@@ -150,7 +150,6 @@ function anm_render_page() {
                     <?php endif; ?>
                     <td>
                         <select class="notice-tag-changer" data-postid="<?php the_ID(); ?>" data-catslug="<?php echo $cat_slug; ?>">
-                            <option value="none">— Remove Tag —</option>
                             <?php foreach ($cat_suffixes as $sfx) : $tag_value = $cat_slug . '-' . $sfx; ?>
                                 <option value="<?php echo $tag_value; ?>" <?php selected($active_tag, $tag_value); ?>><?php echo ucfirst($sfx); ?></option>
                             <?php endforeach; ?>
