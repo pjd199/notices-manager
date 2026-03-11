@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.10
+ * Version: 1.0.11
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
@@ -352,7 +352,7 @@ function anm_schedule_expired_cleanup() {
         if ($next_run->getTimestamp() <= time()) {
             $next_run->modify('+1 day');
         }
-        wp_schedule_event($next_run->getTimestamp(), 'daily', 'anm_expired_events_cleanup');
+        wp_schedule_event($next_run->getTimestamp(), 'daily', 'anm_expired_cleanup');
     }
 }
 
