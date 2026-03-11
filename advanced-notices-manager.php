@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.9
+ * Version: 1.0.10
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
@@ -393,7 +393,7 @@ function anm_do_expired_cleanup() {
                 'type'    => 'DATE',
             ],
             [
-                'key'     => 'expires',
+                'key'     => 'expire',
                 'value'   => $today,
                 'compare' => '<',
                 'type'    => 'DATE',
