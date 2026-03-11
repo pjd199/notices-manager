@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.7
+ * Version: 1.0.8
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
@@ -67,6 +67,7 @@ function anm_render_page() {
                 <tr>
                     <th style="width: 25%;">Title</th>
                     <?php if($cat_slug === 'events'): ?><th style="width: 120px;">Event Date</th><?php endif; ?>
+                    <?php if($cat_slug !== 'events'): ?><th style="width: 120px;">Expiry Date</th><?php endif; ?>
                     <th style="width: 120px;">Published</th>
                     <?php if($cat_slug !== 'introduction'): ?>
                         <th style="width: 70px; text-align:center;">Image</th>
@@ -82,10 +83,15 @@ function anm_render_page() {
                     $pub_date = get_the_date('U');
                     $e_date_raw = get_post_meta($post_id, 'event_start', true);
                     $e_date_ts = $e_date_raw ? strtotime($e_date_raw) : false;
+                    $expires_raw = get_post_meta($post_id, 'expires', true);
+                    $expires_ts  = $expires_raw ? strtotime($expires_raw) : false;
                     $current_tags = wp_get_post_tags($post_id, ['fields' => 'slugs']);
                     $active_tag = reset(array_intersect($current_tags, $cat_specific_tags));
                     
-                    $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > (18 * DAY_IN_SECONDS))) || ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today);
+                    $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > (18 * DAY_IN_SECONDS))) || 
+                        ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today) ||
+                        ($expires_ts && $expires_ts < $today);
+
                     $is_parked = (strpos($active_tag, '-parked') !== false);
                     $row_style = $is_parked ? 'opacity: 0.7; background-color: #f6f7f7;' : ($is_stale ? 'background-color: #f59b78;' : '');
                 ?>
@@ -117,6 +123,7 @@ function anm_render_page() {
                         </div>
                     </td>
                     <?php if($cat_slug === 'events'): ?><td><strong><?php echo $e_date_raw ? date('d/m/Y', $e_date_ts) : '—'; ?></strong></td><?php endif; ?>
+                    <?php if($cat_slug !== 'events'): ?><td><strong><?php echo $expires_raw ? date('d/m/Y', $expires_ts) : '—'; ?></strong></td><?php endif; ?>
                     <td><?php echo get_the_date('d/m/Y'); ?></td>
                     <?php if($cat_slug !== 'introduction'): ?>
                         <td style="text-align:center;">
