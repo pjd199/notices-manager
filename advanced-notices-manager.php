@@ -2,11 +2,10 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.18
+ * Version: 1.0.19
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
- * GitHub Plugin URI: https://github.com/pjd199/notices-manager
  */
 
 if (!defined('ABSPATH')) exit;
@@ -123,17 +122,25 @@ function anm_render_page() {
                             $status_label = '';
                         }
 
+                        $is_new = ($today - $pub_date) <= (6 * DAY_IN_SECONDS);
+                        
                         $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > (18 * DAY_IN_SECONDS))) || 
-                            ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today) ||
+                            ($cat_slug === 'events' && $date_ts && $date_ts < $today) ||
                             ($expires_ts && $expires_ts < $today);
 
-                        $row_style = $is_stale ? 'background-color: #f59b78;' : '';
+                        if ($is_new) {
+                            $row_style = 'background-color: #c5ff99;';
+                        } elseif ($is_state) {
+                            $row_style = 'background-color: #f59b78;';
+                        } else {
+                            $row_style = '';
+                        }
 
                 ?>
-                <tr style="<?php echo $row_style; ?>" class="anm-row" id="post-row-<?php echo $post_id; ?>">
+                <tr style="<?=$row_style?>" class="anm-row" id="post-row-<?php echo $post_id; ?>">
                     <td class="column-title has-row-actions">
                         <strong style="display: inline-block;">
-                            <a class="row-title" href="<?php echo get_edit_post_link(); ?>"><?php the_title(); ?></a>
+                            <a class="row-title" href="<?=get_edit_post_link()?>"><?=esc_html(get_the_title())?></a>
                             <span style="color:black;"><?=$status_label?></span>
                         </strong>
                         <div class="row-actions">
@@ -154,7 +161,7 @@ function anm_render_page() {
                         </div>
                     </td>
                     <td>
-                        <strong><?= $date_raw ? date('d/m/Y', $date_ts) : '—'; ?></strong>
+                        <strong><?= $date_ts ? date('d/m/Y', $date_ts) : '—'; ?></strong>
                     </td>
                     <td><?= get_the_date('d/m/Y') ?></td>
                     <td style="text-align:center;">
@@ -238,11 +245,21 @@ function anm_render_page() {
             });
         });
 
-        // Tag Switcher
         $('.notice-tag-changer').on('change', function() {
             var $select = $(this), $spinner = $select.next('.spinner');
             $spinner.addClass('is-active');
-            $.post(ajaxurl, { action: 'anm_update_tag', post_id: $select.data('postid'), tag: $select.val(), cat_slug: $select.data('catslug'), nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>' }, function(res) { if(res.success) { location.reload(); } });
+            $.post(ajaxurl, { 
+                action: 'anm_update_tag', 
+                post_id: $select.data('postid'), 
+                tag: $select.val(), 
+                cat_slug: $select.data('catslug'), 
+                nonce: '<?=wp_create_nonce("anm_nonce")?>' 
+            }, function(res) { 
+                $spinner.removeClass('is-active');
+                if(!res.success) { 
+                    alert('Save failed');
+                }
+            });
         });
     });
     </script>
