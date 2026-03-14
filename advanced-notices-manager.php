@@ -5,8 +5,7 @@
  * Version: 1.0.13
  * Author: Pete Dibdin
  * License: MIT
- * Plugin URI: https://github.com/pjd199/notices-manager
-* GitHub Plugin URI: https://github.com/pjd199/notices-manager
+ * GitHub Plugin URI: https://github.com/pjd199/notices-manager
  */
 
 if (!defined('ABSPATH')) exit;
