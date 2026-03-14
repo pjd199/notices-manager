@@ -5,11 +5,13 @@
  * Version: 1.0.17
  * Author: Pete Dibdin
  * License: MIT
+ * Plugin URI: https://github.com/pjd199/notices-manager
  * GitHub Plugin URI: https://github.com/pjd199/notices-manager
  */
 
 if (!defined('ABSPATH')) exit;
 
+/* Register menu item */
 add_action('admin_menu', 'anm_register_menu');
 function anm_register_menu() {
     add_submenu_page('edit.php', 'Notices Manager', 'Notices Manager', 'manage_options', 'notices-manager', 'anm_render_page');
@@ -24,9 +26,14 @@ function anm_render_page() {
             display: none !important; 
         }
     </style>
-    <div class="anm-wrap"><h1 class="wp-heading-inline">Notices Manager</h1>
-    <a href="<?=home_url('/notices')?>" class="page-title-action" target="_blank">View Notices Page</a>
-    <hr class="wp-header-end">
+    <div class="anm-wrap">
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px;">
+            <h1 class="wp-heading-inline">Notices Manager</h1>
+            <a href="<?=home_url('/notices')?>" class="button" style="vertical-align: middle;" target="_blank">View Notices Page</a>
+            <a href="<?=home_url('/news')?>" class="button" style="vertical-align: middle;" target="_blank">View News Page</a>
+            <a href="<?=home_url('/events')?>" class="button" style="vertical-align: middle;" target="_blank">View Events Page</a>
+        </div>
+        <hr class="wp-header-end">
     
     <?php
     $categories = ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'];
@@ -54,59 +61,81 @@ function anm_render_page() {
             $args['meta_key'] = 'event_start';
             $args['orderby']  = 'meta_value';
             $args['order']    = 'ASC';
-        }
+        } 
 
-        $query = new WP_Query($args);        
+        $query = new WP_Query($args);
+        
         $default_tag = ($cat_slug === 'introduction' || $cat_slug === 'prayer') ? "{$cat_slug}-full" : "{$cat_slug}-short";
         $new_post_url = admin_url("post-new.php?pre_cat={$cat_obj->term_id}&pre_tag={$default_tag}");
-        
+        $date_col = ($cat_slug === 'events') ? "Event Date" : "Expiry Date";
         ?>
+        
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px;">
-        <h2 style="display: inline; vertical-align: middle; margin-right: 15px;"><?=$cat_name?><span class="count" style="font-weight:normal; color:#666;">(<?=$query->found_posts?>)</span></h2>
-        <a href="<?=$new_post_url?>" class="button action" style="vertical-align: middle;">Add New <?=$cat_name?> Post</a>
+            <h2 style="display: inline; vertical-align: middle; margin-right: 15px;"><?=$cat_name?><span class="count" style="font-weight:normal; color:#666;">(<?=$query->found_posts?>)</span></h2>
+            <a href="<?=$new_post_url?>" class="button action" style="vertical-align: middle;">Add New <?=$cat_name?> Post</a>
         </div>
         <table class="wp-list-table widefat fixed striped posts" style="margin-bottom: 40px;">
             <thead>
                 <tr>
                     <th style="width: 25%;">Title</th>
-                    <?php if($cat_slug === 'events'): ?><th style="width: 120px;">Event Date</th><?php endif; ?>
-                    <?php if($cat_slug !== 'events'): ?><th style="width: 120px;">Expiry Date</th><?php endif; ?>
+                    <th style="width: 120px;"><?= $date_col ?></th>
                     <th style="width: 120px;">Published</th>
-                    <?php if($cat_slug !== 'introduction'): ?>
-                        <th style="width: 70px; text-align:center;">Image</th>
-                        <th style="width: 70px; text-align:center;">Excerpt</th>
-                    <?php endif; ?>
+                    <th style="width: 70px; text-align:center;">Image</th>
+                    <th style="width: 70px; text-align:center;">Excerpt</th>
                     <th style="width: 180px;">Display Style</th>
                 </tr>
             </thead>
             <tbody>
-                <?php if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post(); 
-                    $post_id = get_the_ID();
-                    $status = get_post_status($post_id);
-                    $pub_date = get_the_date('U');
-                    $e_date_raw = get_post_meta($post_id, 'event_start', true);
-                    $e_date_ts = $e_date_raw ? strtotime($e_date_raw) : false;
-                    $expires_raw = get_post_meta($post_id, 'expire', true);
-                    $expires_ts  = $expires_raw ? strtotime($expires_raw) : false;
-                    $current_tags = wp_get_post_tags($post_id, ['fields' => 'slugs']);
-                    $active_tag = reset(array_intersect($current_tags, $cat_specific_tags));
-                    
-                    $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > (18 * DAY_IN_SECONDS))) || 
-                        ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today) ||
-                        ($expires_ts && $expires_ts < $today);
+                <?php if ($query->have_posts()) : 
+                    while ($query->have_posts()) : 
+                        $query->the_post(); 
+                        $post_id = get_the_ID();
+                        $status = get_post_status($post_id);
+                        $pub_date = get_the_date('U');
+                        $date_field = ($cat_slug === 'events') ? "event_start" : "expire";
+                        $date_raw = get_post_meta($post_id, $date_field, true);
+                        $date_ts = $date_raw ? strtotime($date_raw) : false;
+                        $current_tags = wp_get_post_tags($post_id, ['fields' => 'slugs']);
+                        $active_tag = reset(array_intersect($current_tags, $cat_specific_tags));
+                        
+                        if (has_post_thumbnail()) {
+                            $img_data = wp_get_attachment_image_src(get_post_thumbnail_id($post_id), 'full');
+                            if ($img_data) {
+                                $w = $img_data[1];
+                                $h = $img_data[2];
+                                $ratio = ($h > 0) ? ($w / $h) : 0;
+                                // Check for 16:9 (1.777) with small tolerance
+                                if (abs($ratio - (16/9)) < 0.02) {
+                                    $img_flag = '<span style="color:green;">✔</span>';
+                                } else {
+                                    $img_flag = '<span style="color:orange;" title="Wrong Ratio: ' . round($ratio, 2) . ':1">⚠</span>';
+                                }
+                            }
+                        } else {
+                            $img_flag = '<span style="color:red;">✘</span>';
+                        }
+                        $excerpt_flag = has_excerpt() ? '<span style="color:green;">✔</span>' : '<span style="color:red;">✘</span>';
+                        
+                        if ($status !== 'publish') {
+                            $status_labels = ['draft' => 'Draft', 'future' => 'Scheduled', 'pending' => 'Pending', 'private' => 'Private'];
+                            $status_label = isset($status_labels[$status]) ? ' — '.$status_labels[$status] : ucfirst($status);
+                        } else {
+                            $status_label = '';
+                        }
 
-                    $row_style = $is_stale ? 'background-color: #f59b78;' : '';
+                        $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > (18 * DAY_IN_SECONDS))) || 
+                            ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today) ||
+                            ($expires_ts && $expires_ts < $today);
+
+                        $row_style = $is_stale ? 'background-color: #f59b78;' : '';
+
                 ?>
                 <tr style="<?php echo $row_style; ?>" class="anm-row" id="post-row-<?php echo $post_id; ?>">
                     <td class="column-title has-row-actions">
-                        <strong><a class="row-title" href="<?php echo get_edit_post_link(); ?>"><?php the_title(); ?></a></strong>
-                        <?php 
-                            if ($status !== 'publish') {
-                                $status_labels = ['draft' => 'Draft', 'future' => 'Scheduled', 'pending' => 'Pending', 'private' => 'Private'];
-                                $label = isset($status_labels[$status]) ? $status_labels[$status] : ucfirst($status);
-                                echo " — <span style='color:#2271b1; font-weight:600; font-size:11px;'>$label</span>";
-                            }
-                        ?>
+                        <strong style="display: inline-block;">
+                            <a class="row-title" href="<?php echo get_edit_post_link(); ?>"><?php the_title(); ?></a>
+                            <span style="color:black;"><?=$status_label?></span>
+                        </strong>
                         <div class="row-actions">
                             <span class="edit"><a href="<?php echo get_edit_post_link(); ?>">Edit</a> | </span>
                             <span class="move"><a href="#" class="anm-panel-trigger" data-target="move" style="color:#2271b1;">Move</a> | </span>
@@ -120,54 +149,40 @@ function anm_render_page() {
                             <a href="#" class="anm-close-panel" style="position:absolute; right:8px; top:5px; text-decoration:none; color:#666; font-weight:bold;">[X]</a>
                             <small><strong>Move to Category:</strong></small><br>
                             <?php foreach($categories as $dest): if($dest === $cat_slug) continue; ?>
-                                <button class="button button-small anm-do-move" data-postid="<?php echo $post_id; ?>" data-dest="<?php echo $dest; ?>" style="margin-top:4px;"><?php echo ucfirst($dest); ?></button>
+                                <button class="button button-small anm-do-move" data-postid="<?=$post_id?>" data-dest="<?=$dest?>" style="margin-top:4px;"><?=ucfirst($dest)?></button>
                             <?php endforeach; ?>
                         </div>
                     </td>
-                    <?php if($cat_slug === 'events'): ?><td><strong><?php echo $e_date_raw ? date('d/m/Y', $e_date_ts) : '—'; ?></strong></td><?php endif; ?>
-                    <?php if($cat_slug !== 'events'): ?><td><strong><?php echo $expires_raw ? date('d/m/Y', $expires_ts) : '—'; ?></strong></td><?php endif; ?>
-                    <td><?php echo get_the_date('d/m/Y'); ?></td>
-                    <?php if($cat_slug !== 'introduction'): ?>
-                        <td style="text-align:center;">
-                            <?php 
-                                if (has_post_thumbnail()) {
-                                    $img_data = wp_get_attachment_image_src(get_post_thumbnail_id($post_id), 'full');
-                                    if ($img_data) {
-                                        $w = $img_data[1];
-                                        $h = $img_data[2];
-                                        $ratio = ($h > 0) ? ($w / $h) : 0;
-                                        // Check for 16:9 (1.777) with small tolerance
-                                        if (abs($ratio - (16/9)) < 0.02) {
-                                            echo '<span style="color:green;">✔</span>';
-                                        } else {
-                                            echo '<span style="color:orange;" title="Wrong Ratio: ' . round($ratio, 2) . ':1">⚠️</span>';
-                                        }
-                                    }
-                                } else {
-                                    echo '<span style="color:red;">✘</span>';
-                                }
-                            ?>
-                        </td>
-                        <td style="text-align:center;"><?php echo has_excerpt() ? '✔' : '<span style="color:red;">✘</span>'; ?></td>
-                    <?php endif; ?>
+                    <td>
+                        <strong><?= $date_raw ? date('d/m/Y', $date_ts) : '—'; ?></strong>
+                    </td>
+                    <td><?= get_the_date('d/m/Y') ?></td>
+                    <td style="text-align:center;">
+                        <?= $img_flag ?> 
+                    </td>
+                    <td style="text-align:center;">
+                        <?= $excerpt_flag ?>
+                    </td>
                     <td>
                         <select class="notice-tag-changer" data-postid="<?php the_ID(); ?>" data-catslug="<?php echo $cat_slug; ?>">
                             <?php foreach ($cat_suffixes as $sfx) : $tag_value = $cat_slug . '-' . $sfx; ?>
-                                <option value="<?php echo $tag_value; ?>" <?php selected($active_tag, $tag_value); ?>><?php echo ucfirst($sfx); ?></option>
+                                <option value="<?php echo $tag_value; ?>" <?php selected($active_tag, $tag_value); ?>>
+                                    <?php echo ucfirst($sfx); ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                         <span class="spinner" style="float:none;"></span>
                     </td>
                 </tr>
                 <?php endwhile; wp_reset_postdata(); else : ?>
-                <tr><td colspan="7">No notices found.</td></tr>
+                <tr><td colspan="7">No posts found.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
         <?php
     }
-    echo '</div>';
     ?>
+    </div>
     <script>
     jQuery(document).ready(function($) {
         // Toggle Panels
