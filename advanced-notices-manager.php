@@ -17,7 +17,7 @@ function anm_register_menu() {
 
 function anm_render_page() {
     $categories = ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'];
-    $suffixes = ['full', 'short', 'list', 'parked'];
+    $suffixes = ['full', 'short', 'list', 'website'];
     $today = strtotime('today');
     
     echo '<style>
@@ -36,7 +36,7 @@ function anm_render_page() {
         if (!$cat_obj) continue;
 
         $cat_name = esc_html($cat_obj->name);
-        $cat_suffixes = ($cat_slug === 'introduction') ? ['full', 'parked'] : $suffixes;
+        $cat_suffixes = ($cat_slug === 'introduction' || $cat_slug === 'prayer') ? ['full'] : $suffixes;
         $cat_specific_tags = [];
         foreach ($cat_suffixes as $sfx) { $cat_specific_tags[] = $cat_slug . '-' . $sfx; }
 
@@ -92,8 +92,8 @@ function anm_render_page() {
                         ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today) ||
                         ($expires_ts && $expires_ts < $today);
 
-                    $is_parked = (strpos($active_tag, '-parked') !== false);
-                    $row_style = $is_parked ? 'opacity: 0.7; background-color: #f6f7f7;' : ($is_stale ? 'background-color: #f59b78;' : '');
+                    $is_web_only = (strpos($active_tag, '-website') !== false);
+                    $row_style = $is_stale ? 'background-color: #f59b78;' : '';
                 ?>
                 <tr style="<?php echo $row_style; ?>" class="anm-row" id="post-row-<?php echo $post_id; ?>">
                     <td class="column-title has-row-actions">
@@ -296,7 +296,7 @@ add_action('wp_ajax_anm_update_tag', function() {
     $post_id = intval($_POST['post_id']);
     $cat_slug = sanitize_text_field($_POST['cat_slug']);
     $new_tag = sanitize_text_field($_POST['tag']);
-    $all_suffixes = ['full', 'short', 'list', 'parked'];
+    $all_suffixes = ['full', 'short', 'list', 'web'];
     $tags_to_strip = []; foreach($all_suffixes as $s) { $tags_to_strip[] = $cat_slug . '-' . $s; }
     if (current_user_can('edit_post', $post_id)) {
         wp_remove_object_terms($post_id, $tags_to_strip, 'post_tag');
@@ -365,12 +365,12 @@ add_action('anm_expired_cleanup', 'anm_do_expired_cleanup');
 function anm_do_expired_cleanup() {
     $today = date('Y-m-d'); // Current date in ISO format for reliable comparison
     $controlled_tags = [
-        'introduction-full', 'introduction-parked',
-        'news-full', 'news-short', 'news-list', 'news-parked',
-        'events-full', 'events-short', 'events-list', 'events-parked',
-        'prayer-full', 'prayer-short', 'prayer-list', 'prayer-parked',
-        'jobs-full', 'jobs-short', 'jobs-list', 'jobs-parked',
-        'volunteering-full', 'volunteering-short', 'volunteering-list', 'volunteering-parked'
+        'introduction-full',
+        'news-full', 'news-short', 'news-list', 'news-website',
+        'events-full', 'events-short', 'events-list', 'events-website',
+        'prayer-full', 'prayer-short', 'prayer-list', 'prayer-website',
+        'jobs-full', 'jobs-short', 'jobs-list', 'jobs-website',
+        'volunteering-full', 'volunteering-short', 'volunteering-list', 'volunteering-website'
     ];
 
     $args = [
