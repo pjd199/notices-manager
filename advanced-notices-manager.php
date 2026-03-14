@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.16
+ * Version: 1.0.17
  * Author: Pete Dibdin
  * License: MIT
  * GitHub Plugin URI: https://github.com/pjd199/notices-manager
@@ -16,20 +16,22 @@ function anm_register_menu() {
 }
 
 function anm_render_page() {
-    $categories = ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'];
-    $suffixes = ['full', 'short', 'list', 'website'];
-    $today = strtotime('today');
-    
-    echo '<style>
+    ?>
+    <style>
         /* Hide LiteSpeed Success/Purge notices only on this page */
         .anm-wrap ~ .litespeed_icon.notice-success,
         .litespeed_icon.notice-success { 
             display: none !important; 
         }
-    </style>';
-    echo '<div class="anm-wrap"><h1 class="wp-heading-inline">Notices Manager</h1>';
-    echo '<a href="' . home_url('/notices') . '" class="page-title-action" target="_blank">View Notices Page</a>';
-    echo '<hr class="wp-header-end">';
+    </style>
+    <div class="anm-wrap"><h1 class="wp-heading-inline">Notices Manager</h1>
+    <a href="<?=home_url('/notices')?>" class="page-title-action" target="_blank">View Notices Page</a>
+    <hr class="wp-header-end">
+    
+    <?php
+    $categories = ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'];
+    $suffixes = ['full', 'short', 'list', 'website'];
+    $today = strtotime('today');
 
     foreach ($categories as $cat_slug) {
         $cat_obj = get_category_by_slug($cat_slug);
