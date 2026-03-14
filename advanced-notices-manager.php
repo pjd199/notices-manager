@@ -54,14 +54,15 @@ function anm_render_page() {
             $args['order']    = 'ASC';
         }
 
-        $query = new WP_Query($args);
-        echo "<h2>$cat_name <span class='count' style='font-weight:normal; color:#666;'>({$query->found_posts})</span></h2>";
-        
-        $default_tag = ($cat_slug === 'introduction') ? 'introduction-full' : "{$cat_slug}-short";
+        $query = new WP_Query($args);        
+        $default_tag = ($cat_slug === 'introduction' || $cat_slug === 'prayer') ? "{$cat_slug}-full" : "{$cat_slug}-short";
         $new_post_url = admin_url("post-new.php?pre_cat={$cat_obj->term_id}&pre_tag={$default_tag}");
-        echo "<a href='$new_post_url' class='button action' style='margin-bottom:15px;'>+ Add New $cat_name Post</a>";
-
+        
         ?>
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px;">
+        <h2 style="display: inline; vertical-align: middle; margin-right: 15px;"><?=$cat_name?><span class="count" style="font-weight:normal; color:#666;">(<?=$query->found_posts?>)</span></h2>
+        <a href="<?=$new_post_url?>" class="button action" style="vertical-align: middle;">Add New <?=$cat_name?> Post</a>
+        </div>
         <table class="wp-list-table widefat fixed striped posts" style="margin-bottom: 40px;">
             <thead>
                 <tr>
@@ -92,7 +93,6 @@ function anm_render_page() {
                         ($cat_slug === 'events' && $e_date_ts && $e_date_ts < $today) ||
                         ($expires_ts && $expires_ts < $today);
 
-                    $is_web_only = (strpos($active_tag, '-website') !== false);
                     $row_style = $is_stale ? 'background-color: #f59b78;' : '';
                 ?>
                 <tr style="<?php echo $row_style; ?>" class="anm-row" id="post-row-<?php echo $post_id; ?>">
