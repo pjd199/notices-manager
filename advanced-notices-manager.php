@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.19
+ * Version: 1.0.20
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
@@ -91,8 +91,7 @@ function anm_render_page() {
                         $post_id = get_the_ID();
                         $status = get_post_status($post_id);
                         $pub_date = get_the_date('U');
-                        $date_field = ($cat_slug === 'events') ? "event_start" : "expire";
-                        $date_raw = get_post_meta($post_id, $date_field, true);
+                        $date_raw = get_post_meta($post_id, ($cat_slug === 'events') ? "event_start" : "expire", true);
                         $date_ts = $date_raw ? strtotime($date_raw) : false;
                         $current_tags = wp_get_post_tags($post_id, ['fields' => 'slugs']);
                         $active_tag = reset(array_intersect($current_tags, $cat_specific_tags));
@@ -122,15 +121,14 @@ function anm_render_page() {
                             $status_label = '';
                         }
 
-                        $is_new = ($today - $pub_date) <= (6 * DAY_IN_SECONDS);
+                        $is_new = floor(($today - $pub_date) / DAY_IN_SECONDS) < 6;
                         
                         $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > (18 * DAY_IN_SECONDS))) || 
-                            ($cat_slug === 'events' && $date_ts && $date_ts < $today) ||
-                            ($expires_ts && $expires_ts < $today);
+                            ($date_ts && $date_ts < $today);
 
                         if ($is_new) {
                             $row_style = 'background-color: #c5ff99;';
-                        } elseif ($is_state) {
+                        } elseif ($is_stale) {
                             $row_style = 'background-color: #f59b78;';
                         } else {
                             $row_style = '';
