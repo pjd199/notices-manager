@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.21
+ * Version: 1.0.22
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
@@ -139,7 +139,7 @@ function anm_render_page() {
                         if ($is_new) {
                             $row_style = 'background-color: #c5ff99;';
                         } elseif ($is_stale) {
-                            $row_style = 'background-color: #f59b78;';
+                            $row_style = 'background-color: #faa0a0;';
                         } else {
                             $row_style = '';
                         }
