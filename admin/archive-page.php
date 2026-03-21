@@ -7,6 +7,8 @@ add_action('admin_menu', function() {
 });
 
 function render_notices_archive_page() {
+    global $wpdb;    
+    
     // 1. Handle Export
     if (isset($_GET['export_notices'])) {
         $data = $wpdb->get_results("SELECT * FROM " . ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE);
@@ -50,7 +52,11 @@ function render_notices_archive_page() {
             $all_ids = array_merge($all_ids, $p_ids);
         }
         $wpdb->replace(ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE, ['archive_date' => $date, 'post_ids' => implode(',', array_unique($all_ids))]);
-    }?>
+    }
+    
+
+    $archives = $wpdb->get_results("SELECT * FROM " . ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE . " ORDER BY archive_date DESC");
+    ?>
         <h1>Notices Archive</h1>
         <form method="post" style="margin: 20px 0;">
             <input type="date" name="archive_date" value="<?php echo date('Y-m-d'); ?>">
@@ -65,9 +71,9 @@ function render_notices_archive_page() {
                     <td><strong><?php echo date('jS M Y', strtotime($row->archive_date)); ?></strong></td>
                     <td><?php echo count(explode(',', $row->post_ids)); ?></td>
                     <td>
-                        <a href="<?php echo add_query_arg('view_notice_archive', $row->id, home_url('/')); ?>" target="_blank">View HTML</a> |
-                        <a href="?download_docx=<?php echo $row->id; ?>">DOCX</a> |
-                        <a href="?download_pdf=<?php echo $row->id; ?>">PDF</a>
+                        <a href="<?php echo add_query_arg('notice_archive_html', $row->id, home_url('/')); ?>" target="_blank">View HTML</a> |
+                        <a href="<?php echo add_query_arg('notice_archive_docx', $row->id, home_url('/')); ?>">DOCX</a> |
+                        <a href="<?php echo add_query_arg('notice_archive_pdf', $row->id, home_url('/')); ?>">PDF</a>
                     </td>
                 </tr>
                 <?php endforeach; ?>
