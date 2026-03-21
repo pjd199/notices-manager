@@ -94,7 +94,8 @@ function anm_render_page() {
                         $date_raw = get_post_meta($post_id, ($cat_slug === 'events') ? "event_start" : "expire", true);
                         $date_ts = $date_raw ? strtotime($date_raw) : false;
                         $current_tags = wp_get_post_tags($post_id, ['fields' => 'slugs']);
-                        $active_tag = reset(array_intersect($current_tags, $cat_specific_tags));
+                        $intersect  = array_intersect($current_tags, $cat_specific_tags);
+                        $active_tag = reset($intersect);
                         
                         if (has_post_thumbnail()) {
                             $img_data = wp_get_attachment_image_src(get_post_thumbnail_id($post_id), 'full');
