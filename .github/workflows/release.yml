@@ -44,7 +44,7 @@ jobs:
           cp -r admin ${{ env.PLUGIN_SLUG }}/
           cp -r vendor ${{ env.PLUGIN_SLUG }}/
           cp ${{ env.PLUGIN_SLUG }}.php ${{ env.PLUGIN_SLUG }}/
-          if [ -f README.md ]; then cp uninstall.php ${{ env.PLUGIN_SLUG }}/; fi
+          if [ -f uninstall.php ]; then cp uninstall.php ${{ env.PLUGIN_SLUG }}/; fi
           
           # Include README/License if they exist
           if [ -f README.md ]; then cp README.md ${{ env.PLUGIN_SLUG }}/; fi
