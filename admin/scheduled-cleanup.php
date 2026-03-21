@@ -12,8 +12,7 @@ add_filter('cron_schedules', function($schedules) {
 });
 
 // Hook to run on activation
-register_activation_hook(__FILE__, 'anm_schedule_expired_cleanup');
-function anm_schedule_expired_cleanup() {
+register_activation_hook(__FILE__, function () {
     if (!wp_next_scheduled('anm_expired_cleanup')) {
         // Calculate next 00:01 in site's local time
         $timezone = wp_timezone();
@@ -23,7 +22,7 @@ function anm_schedule_expired_cleanup() {
         }
         wp_schedule_event($next_run->getTimestamp(), 'daily', 'anm_expired_cleanup');
     }
-}
+});
 
 // Hook to clear on deactivation
 register_deactivation_hook(__FILE__, function() {
@@ -31,8 +30,7 @@ register_deactivation_hook(__FILE__, function() {
 });
 
 // The actual cleanup task
-add_action('anm_expired_cleanup', 'anm_do_expired_cleanup');
-function anm_do_expired_cleanup() {
+add_action('anm_expired_cleanup', function() {
     $today = date('Y-m-d'); // Current date in ISO format for reliable comparison
     $controlled_tags = [
         'introduction-full',
@@ -86,4 +84,4 @@ function anm_do_expired_cleanup() {
     }
 
     wp_reset_postdata();
-}
+});
