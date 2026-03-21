@@ -21,6 +21,6 @@ if ( is_admin() ) {
 
 /* Register menu item */
 add_action('admin_menu', function () {
-    add_submenu_page('edit.php', 'Notices Manager', 'Notices Manager', 'manage_options', 'notices-manager', __NAMESPACE__ .'anm_render_page');
+    add_submenu_page('edit.php', 'Notices Manager', 'Notices Manager', 'manage_options', 'notices-manager', __NAMESPACE__ .'\anm_render_page');
 });
 
