@@ -3,7 +3,7 @@
 namespace AdvancedNoticesManager;
 
 add_action('admin_menu', function() {
-    add_submenu_page('edit.php', 'Notices Archive', 'Notices Archive', 'manage_options', 'notices-archive', 'render_notices_archive_page');
+    add_submenu_page('edit.php', 'Notices Archive', 'Notices Archive', 'manage_options', 'notices-archive', __NAMESPACE__ .'\render_notices_archive_page');
 });
 
 function render_notices_archive_page() {
@@ -50,7 +50,7 @@ function render_notices_archive_page() {
             $all_ids = array_merge($all_ids, $p_ids);
         }
         $wpdb->replace(ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE, ['archive_date' => $date, 'post_ids' => implode(',', array_unique($all_ids))]);
-    }$
+    }?>
         <h1>Notices Archive</h1>
         <form method="post" style="margin: 20px 0;">
             <input type="date" name="archive_date" value="<?php echo date('Y-m-d'); ?>">
