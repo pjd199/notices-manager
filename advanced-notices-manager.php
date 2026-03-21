@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.23
+ * Version: 1.0.25
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
@@ -31,6 +31,8 @@ function anm_render_page() {
             <a href="<?=home_url('/notices')?>" class="button" style="vertical-align: middle;" target="_blank">View Notices Page</a>
             <a href="<?=home_url('/news')?>" class="button" style="vertical-align: middle;" target="_blank">View News Page</a>
             <a href="<?=home_url('/events')?>" class="button" style="vertical-align: middle;" target="_blank">View Events Page</a>
+            <a href="<?php echo esc_url(add_query_arg('print_notices', '1')) ?>" target="_blank" class="page-title-action">Print to PDF</a>
+            <a href="<?php echo esc_url(add_query_arg('download_docx', '1')) ?>" target="_blank" class="page-title-action">Export to DOCX</a>
         </div>
         <hr class="wp-header-end">
     
@@ -340,7 +342,7 @@ add_action('wp_ajax_anm_update_tag', function() {
     $post_id = intval($_POST['post_id']);
     $cat_slug = sanitize_text_field($_POST['cat_slug']);
     $new_tag = sanitize_text_field($_POST['tag']);
-    $all_suffixes = ['full', 'short', 'list', 'web'];
+    $all_suffixes = ['full', 'short', 'list', 'website'];
     $tags_to_strip = []; foreach($all_suffixes as $s) { $tags_to_strip[] = $cat_slug . '-' . $s; }
     if (current_user_can('edit_post', $post_id)) {
         wp_remove_object_terms($post_id, $tags_to_strip, 'post_tag');
@@ -462,3 +464,287 @@ function anm_do_expired_cleanup() {
     wp_reset_postdata();
 }
 
+
+add_action('admin_init', function() {
+    if (!isset($_GET['print_notices']) || !current_user_can('manage_options')) return;
+
+    $base_categories = ['news', 'events', 'jobs', 'volunteering'];
+    $suffixes = ['-full', '-short', '-list', '-website'];
+
+    // --- PRE-FETCH & FILTER DATA ---
+    $organized_data = [];
+    foreach ($base_categories as $base) {
+        $current_tags = [];
+        foreach ($suffixes as $suffix) { $current_tags[] = $base . $suffix; }
+
+        $posts = get_posts([
+            'post_type'      => 'post',
+            'posts_per_page' => -1,
+            'category_name'  => $base,
+            'tax_query'      => [[
+               'taxonomy' => 'post_tag',  
+                'field'    => 'slug',
+                'terms'    => $current_tags,
+                'operator' => 'IN',
+            ]],
+            'orderby' => 'title',
+            'order'   => 'ASC'
+        ]);
+        if (!empty($posts)) { $organized_data[$base] = $posts; }
+    }
+
+    // --- RENDER THE PRINT PAGE ---
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Notices Export - <?php echo date('Y-m-d'); ?></title>
+        <style>
+            body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; padding: 0; margin: 0; }
+            .container { max-width: 800px; margin: auto; padding: 40px; }
+            
+            /* Print Specific Styles */
+            @media print {
+                .no-print { display: none; }
+                .page-break { page-break-before: always; }
+                body { padding: 0; }
+            }
+
+            .prep-header { background: #fff9c4; padding: 20px; border: 1px solid #fbc02d; margin-bottom: 30px; text-align: center; }
+            .toc { background: #f9f9f9; padding: 30px; border: 1px solid #eee; margin-bottom: 40px; }
+            .toc h1 { margin-top: 0; border-bottom: 2px solid #333; }
+            .toc ul { list-style: none; padding-left: 0; }
+            .toc-cat { font-weight: bold; font-size: 1.2em; margin-top: 15px; text-transform: uppercase; color: #2c3e50; }
+            .toc-item { padding-left: 20px; color: #555; }
+
+            .section-title { color: #2c3e50; border-bottom: 3px solid #2c3e50; padding-bottom: 10px; text-transform: capitalize; }
+            .notice-entry { margin-bottom: 40px; }
+            .notice-title { color: #2980b9; margin-bottom: 5px; }
+            .notice-meta { font-size: 0.85em; color: #7f8c8d; margin-bottom: 15px; border-left: 3px solid #bdc3c7; padding-left: 10px; }
+            .notice-content { text-align: justify; }
+            
+            hr { border: 0; border-top: 1px solid #eee; margin: 30px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="no-print">
+                <h3>Export Options</h3>
+                <button class="btn btn-pdf" onclick="window.print()()">Print</button>
+            </div>
+            <div id="export-content">
+                <div class="toc">
+                    <h1>Table of Contents</h1>
+                    <ul>
+                        <?php foreach ($organized_data as $base_name => $posts): ?>
+                            <li class="toc-cat"><?php echo esc_html($base_name); ?></li>
+                            <?php foreach ($posts as $p): ?>
+                            <a href="#notice-<?php echo $p->ID; ?>">
+                                        <li class="toc-item"><?php echo esc_html($p->post_title); ?></li>
+                                    </a>
+                            <?php endforeach; ?>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+    
+                <?php foreach ($organized_data as $base_name => $posts): ?>
+                    <div class="page-break">
+                        <h1 class="section-title"><?php echo esc_html($base_name); ?></h1>
+                        
+                        <?php foreach ($posts as $post): ?>                                
+                                <div class="notice-entry" id="notice-<?php echo $post->ID; ?>">
+                                <h2 class="notice-title"><?php echo esc_html($post->post_title); ?></h2>
+                                <div class="notice-content">
+        <?php 
+            // 1. Get the raw content
+            $content = $post->post_content;
+            $content = preg_replace('/<img[^>]+>/i', '', $content);
+        echo $content;
+        ?>
+    </div>
+                            </div>
+                            <hr>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit;
+});
+
+function clean_html_for_wordml($html, &$links) {
+    // 1. Initial Cleanup: Remove images and hidden newlines
+    $html = preg_replace('/<img[^>]+>/i', '', $html);
+    $html = str_replace(array("\r", "\n"), '', $html);
+    $html = html_entity_decode($html, ENT_QUOTES, 'UTF-8');
+
+    // 2. Convert H1-H6 to Bold Paragraphs
+    // Wraps header content in bold placeholders and ensures it's on a new line
+    $html = preg_replace('/<h[1-6][^>]*>(.*?)<\/h[1-6]>/i', '||P_BREAK||||B_START||$1||B_END||||P_BREAK||', $html);
+
+    // 3. Handle Hyperlinks
+    // Captures URL and Text, assigns a Relationship ID (rId), and stores in $links array
+    $html = preg_replace_callback('/<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/i', function($matches) use (&$links) {
+        $url = htmlspecialchars($matches[1], ENT_XML1, 'UTF-8');
+        $text = strip_tags($matches[2]);
+        
+        // Generate a unique Relationship ID for this link
+        $rId = 'rIdLnk' . (count($links) + 100); 
+        $links[$rId] = $url;
+
+        return "||LNK_START|{$rId}||{$text}||LNK_END||";
+    }, $html);
+
+    // 4. Standard formatting placeholders
+    $html = str_ireplace(array('<strong>', '<b>'), '||B_START||', $html);
+    $html = str_ireplace(array('</strong>', '</b>'), '||B_END||', $html);
+    $html = str_ireplace(array('<br>', '<br/>', '<br />'), '||SOFT_BREAK||', $html);
+    
+    // Convert <p> logic: ignore opening, use closing as the break signal
+    $html = str_ireplace('</p>', '||P_BREAK||', $html);
+    $html = str_ireplace('<p>', '', $html);
+
+    // 5. Cleanup: Strip remaining HTML and XML Escape the raw text
+    $html = strip_tags($html);
+    $html = htmlspecialchars($html, ENT_XML1, 'UTF-8');
+
+    // 6. Formatting Polish
+    // Collapse multiple consecutive paragraph breaks into one
+    $html = preg_replace('/(\|\|P_BREAK\|\|)+/', '||P_BREAK||', $html);
+    
+    // CRITICAL: Remove trailing P_BREAKs only at the very end of the string
+    // This prevents the "Extra Blank Line" without breaking the final ||LNK_END||
+    $html = preg_replace('/(\|\|P_BREAK\|\|)+$/', '', $html);
+
+    // 7. FINAL CONVERSION TO WORDML
+    // Soft Return (Shift+Enter style)
+    $html = str_replace('||SOFT_BREAK||', '<w:br/>', $html);
+    
+    // Hard Return: Closes current run/para and starts a new one with space preservation
+    $html = str_replace('||P_BREAK||', '</w:t></w:r></w:p><w:p><w:r><w:t xml:space="preserve">', $html);
+    
+    // Bold Logic: Restarts a run with the Bold property enabled
+    $html = str_replace('||B_START||', '</w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">', $html);
+    $html = str_replace('||B_END||', '</w:t></w:r><w:r><w:t xml:space="preserve">', $html);
+
+    // Hyperlink XML: Injects the Relationship ID and sets the standard Blue/Underline style
+    $link_xml = '</w:t></w:r><w:hyperlink r:id="$1" w:history="1"><w:r><w:rPr><w:rStyle w:val="Hyperlink"/><w:color w:val="0563C1"/><w:u w:val="single"/></w:rPr><w:t xml:space="preserve">$2</w:t></w:r></w:hyperlink><w:r><w:t xml:space="preserve">';
+    
+    $html = preg_replace('/\|\|LNK_START\|([^|]+)\|\|([^|]+)\|\|LNK_END\|\|/', $link_xml, $html);
+
+    return trim($html);
+}
+
+
+function generate_docx_from_template($organized_data) {
+    $template_path = plugin_dir_path(__FILE__) . 'templates/template.docx';
+    $temp_file = wp_upload_dir()['path'] . '/temp_notices.docx';
+    copy($template_path, $temp_file);
+
+    $zip = new ZipArchive;
+    if ($zip->open($temp_file) === TRUE) {
+        $xml_content = $zip->getFromName('word/document.xml');
+        $rels_content = $zip->getFromName('word/_rels/document.xml.rels');
+
+        $links = []; // To store our rIds and URLs
+        $notices_xml = "";
+
+        
+        foreach ($organized_data as $category => $posts) {
+            $notices_xml .= "<w:p><w:r><w:rPr><w:b/><w:sz w:val='32'/></w:rPr><w:t>" . strtoupper($category) . "</w:t></w:r></w:p>";
+            foreach ($posts as $post) {
+                $clean_title = htmlspecialchars(html_entity_decode($post->post_title, ENT_QUOTES, 'UTF-8'), ENT_XML1, 'UTF-8');
+                $notices_xml .= "<w:p><w:r><w:rPr><w:b/><w:sz w:val='28'/></w:rPr><w:t xml:space='preserve'>" . $clean_title . "</w:t></w:r></w:p>";
+
+                // 2. NEW: Check for Event Date
+                $event_date_raw = get_post_meta($post->ID, 'event_start', true);
+                if (!empty($event_date_raw)) {
+                    // Convert to a nice format (e.g., "Saturday, 12 April 2025")
+                    // If your date is stored as YYYY-MM-DD, strtotime works perfectly.
+                    $formatted_date = date('l jS F Y \a\t g:ia', strtotime($event_date_raw));
+                    $clean_date = htmlspecialchars($formatted_date, ENT_XML1, 'UTF-8');
+            
+                    // Add as a separate paragraph (Italics, slightly smaller text)
+                    $notices_xml .= "<w:p><w:r><w:rPr><w:i/><w:sz w:val='22'/><w:color w:val='555555'/></w:rPr><w:t xml:space='preserve'>" . $clean_date . "</w:t></w:r></w:p>";
+                }
+                            
+                // Pass the $links array by reference
+                $processed_body = clean_html_for_wordml($post->post_content, $links);
+                
+                $notices_xml .= "<w:p><w:r><w:t xml:space='preserve'>" . $processed_body . "</w:t></w:r></w:p>";
+                $notices_xml .= "<w:p><w:r><w:t>________________________________________________</w:t></w:r></w:p>";
+            }
+        }
+
+        // 1. Update document.xml
+        $xml_content = str_replace('${notices}', $notices_xml, $xml_content);
+        $zip->addFromString('word/document.xml', $xml_content);
+
+        // 2. Update document.xml.rels with the new links
+        foreach ($links as $rId => $url) {
+            $link_rel = '<Relationship Id="' . $rId . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="' . $url . '" TargetMode="External"/>';
+            $rels_content = str_replace('</Relationships>', $link_rel . '</Relationships>', $rels_content);
+        }
+        $zip->addFromString('word/_rels/document.xml.rels', $rels_content);
+
+        $zip->close();
+
+        // Stream to browser (as before)
+        header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        header('Content-Disposition: attachment; filename="Weekly_Notices.docx"');
+        readfile($temp_file);
+        unlink($temp_file); 
+        exit;
+    }
+}
+
+add_action('admin_init', function() {
+    if (!isset($_GET['download_docx']) || !current_user_can('manage_options')) return;
+    
+    $base_categories = ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'];
+    $suffixes = ['-full', '-short', '-list', '-website'];
+
+    $organized_data = [];
+    foreach ($base_categories as $base) {
+        $current_tags = [];
+        foreach ($suffixes as $suffix) { 
+            $current_tags[] = $base . $suffix; 
+        }
+
+        // Default query arguments
+        $args = [
+            'post_type'      => 'post',
+            'posts_per_page' => -1,
+            'category_name'  => $base,
+            'tax_query'      => [[
+                'taxonomy' => 'post_tag',  
+                'field'    => 'slug',
+                'terms'    => $current_tags,
+                'operator' => 'IN',
+            ]],
+            'orderby'        => 'title',
+            'order'          => 'ASC'
+        ];
+
+        // Specific sorting for Events
+        if ($base === 'events') {
+            $args['meta_key'] = 'event_start';
+            $args['orderby']  = 'meta_value'; // Use 'meta_value_num' if stored as timestamp
+            $args['order']    = 'ASC';
+            // Optional: Ensure it handles the meta value as a date
+            $args['meta_type'] = 'DATE'; 
+        }
+
+        $posts = get_posts($args);
+        
+        if (!empty($posts)) { 
+            $organized_data[$base] = $posts; 
+        }
+    }
+    
+    generate_docx_from_template($organized_data);
+});
