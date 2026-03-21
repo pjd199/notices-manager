@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.22
+ * Version: 1.0.23
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
@@ -77,6 +77,8 @@ function anm_render_page() {
         $default_tag = ($cat_slug === 'introduction' || $cat_slug === 'prayer') ? "{$cat_slug}-full" : "{$cat_slug}-short";
         $new_post_url = admin_url("post-new.php?pre_cat={$cat_obj->term_id}&pre_tag={$default_tag}");
         $date_col = ($cat_slug === 'events') ? "Event Date" : "Expiry Date";
+
+        $tag_labels = ['full' => 'Full post', 'short' => 'Excerpt', 'list' => 'Title', 'website' => 'Website only'];
         ?>
         
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px;">
@@ -179,10 +181,10 @@ function anm_render_page() {
                         <?= $excerpt_flag ?>
                     </td>
                     <td>
-                        <select class="notice-tag-changer" data-postid="<?php the_ID(); ?>" data-catslug="<?php echo $cat_slug; ?>">
+                        <select class="notice-tag-changer" data-postid="<?= the_ID() ?>" data-catslug="<?= $cat_slug ?>">
                             <?php foreach ($cat_suffixes as $sfx) : $tag_value = $cat_slug . '-' . $sfx; ?>
-                                <option value="<?php echo $tag_value; ?>" <?php selected($active_tag, $tag_value); ?>>
-                                    <?php echo ucfirst($sfx); ?>
+                                <option value="<?= $tag_value ?>" <?= selected($active_tag, $tag_value) ?>>
+                                    <?= isset($tag_labels[$sfx]) ? $tag_labels[$sfx] : ucfirst($sfx) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
