@@ -17,8 +17,6 @@ function anm_render_page() {
             <a href="<?=home_url('/notices')?>" class="button" style="vertical-align: middle;" target="_blank">View Notices Page</a>
             <a href="<?=home_url('/news')?>" class="button" style="vertical-align: middle;" target="_blank">View News Page</a>
             <a href="<?=home_url('/events')?>" class="button" style="vertical-align: middle;" target="_blank">View Events Page</a>
-            <a href="<?php echo esc_url(add_query_arg('print_notices', '1')) ?>" target="_blank" class="page-title-action">Print to PDF</a>
-            <a href="<?php echo esc_url(add_query_arg('download_docx', '1')) ?>" target="_blank" class="page-title-action">Export to DOCX</a>
         </div>
         <hr class="wp-header-end">
     
