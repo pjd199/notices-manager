@@ -1,0 +1,337 @@
+<?php
+
+namespace AdvacncedNoticesManager;
+
+function anm_render_page() {
+    ?>
+    <style>
+        /* Hide LiteSpeed Success/Purge notices only on this page */
+        .anm-wrap ~ .litespeed_icon.notice-success,
+        .litespeed_icon.notice-success { 
+            display: none !important; 
+        }
+    </style>
+    <div class="anm-wrap">
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px;">
+            <h1 class="wp-heading-inline">Notices Manager</h1>
+            <a href="<?=home_url('/notices')?>" class="button" style="vertical-align: middle;" target="_blank">View Notices Page</a>
+            <a href="<?=home_url('/news')?>" class="button" style="vertical-align: middle;" target="_blank">View News Page</a>
+            <a href="<?=home_url('/events')?>" class="button" style="vertical-align: middle;" target="_blank">View Events Page</a>
+            <a href="<?php echo esc_url(add_query_arg('print_notices', '1')) ?>" target="_blank" class="page-title-action">Print to PDF</a>
+            <a href="<?php echo esc_url(add_query_arg('download_docx', '1')) ?>" target="_blank" class="page-title-action">Export to DOCX</a>
+        </div>
+        <hr class="wp-header-end">
+    
+    <?php
+    $categories = ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'];
+    $suffixes = ['full', 'short', 'list', 'website'];
+    $today = strtotime('today');
+
+    foreach ($categories as $cat_slug) {
+        $cat_obj = get_category_by_slug($cat_slug);
+        if (!$cat_obj) continue;
+
+        $cat_name = esc_html($cat_obj->name);
+        $cat_suffixes = ($cat_slug === 'introduction' || $cat_slug === 'prayer') ? ['full'] : $suffixes;
+        $cat_specific_tags = [];
+        foreach ($cat_suffixes as $sfx) { $cat_specific_tags[] = $cat_slug . '-' . $sfx; }
+
+        $args = [
+            'post_type'      => 'post',
+            'posts_per_page' => -1,
+            'post_status'    => ['publish', 'pending', 'draft', 'future', 'private'],
+            'category_name'  => $cat_slug,
+            'tax_query'      => [['taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $cat_specific_tags]],
+        ];
+
+        if ($cat_slug === 'events') {
+            $args['meta_query'] = [
+                'relation' => 'OR',
+                [
+                    'key'     => 'event_start',
+                    'compare' => 'EXISTS',
+                ],
+                [
+                    'key'     => 'event_start',
+                    'compare' => 'NOT EXISTS',
+                ],
+            ];
+            $args['orderby']  = 'meta_value';
+            $args['order']    = 'ASC';
+        } 
+
+        $query = new WP_Query($args);
+        
+        $default_tag = ($cat_slug === 'introduction' || $cat_slug === 'prayer') ? "{$cat_slug}-full" : "{$cat_slug}-short";
+        $new_post_url = admin_url("post-new.php?pre_cat={$cat_obj->term_id}&pre_tag={$default_tag}");
+        $date_col = ($cat_slug === 'events') ? "Event Date" : "Expiry Date";
+
+        $tag_labels = ['full' => 'Full post', 'short' => 'Excerpt', 'list' => 'Title', 'website' => 'Website only'];
+        ?>
+        
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px;">
+            <h2 style="display: inline; vertical-align: middle; margin-right: 15px;"><?=$cat_name?><span class="count" style="font-weight:normal; color:#666;">(<?=$query->found_posts?>)</span></h2>
+            <a href="<?=$new_post_url?>" class="button action" style="vertical-align: middle;">Add New <?=$cat_name?> Post</a>
+        </div>
+        <table class="wp-list-table widefat fixed striped posts" style="margin-bottom: 40px;">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Title</th>
+                    <th style="width: 120px;"><?= $date_col ?></th>
+                    <th style="width: 120px;">Published</th>
+                    <th style="width: 70px; text-align:center;">Image</th>
+                    <th style="width: 70px; text-align:center;">Excerpt</th>
+                    <th style="width: 180px;">Display Style</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if ($query->have_posts()) : 
+                    while ($query->have_posts()) : 
+                        $query->the_post(); 
+                        $post_id = get_the_ID();
+                        $status = get_post_status($post_id);
+                        $pub_date = get_the_date('U');
+                        $date_raw = get_post_meta($post_id, ($cat_slug === 'events') ? "event_start" : "expire", true);
+                        $date_ts = $date_raw ? strtotime($date_raw) : false;
+                        $current_tags = wp_get_post_tags($post_id, ['fields' => 'slugs']);
+                        $active_tag = reset(array_intersect($current_tags, $cat_specific_tags));
+                        
+                        if (has_post_thumbnail()) {
+                            $img_data = wp_get_attachment_image_src(get_post_thumbnail_id($post_id), 'full');
+                            if ($img_data) {
+                                $w = $img_data[1];
+                                $h = $img_data[2];
+                                $ratio = ($h > 0) ? ($w / $h) : 0;
+                                // Check for 16:9 (1.777) with small tolerance
+                                if (abs($ratio - (16/9)) < 0.02) {
+                                    $img_flag = '<span style="color:green;">✔</span>';
+                                } else {
+                                    $img_flag = '<span style="color:orange;" title="Wrong Ratio: ' . round($ratio, 2) . ':1">⚠</span>';
+                                }
+                            }
+                        } else {
+                            $img_flag = '<span style="color:red;">✘</span>';
+                        }
+                        $excerpt_flag = has_excerpt() ? '<span style="color:green;">✔</span>' : '<span style="color:red;">✘</span>';
+                        
+                        if ($status !== 'publish') {
+                            $status_labels = ['draft' => 'Draft', 'future' => 'Scheduled', 'pending' => 'Pending', 'private' => 'Private'];
+                            $status_label = isset($status_labels[$status]) ? ' — '.$status_labels[$status] : ucfirst($status);
+                        } else {
+                            $status_label = '';
+                        }
+
+                        $is_new = floor(($today - $pub_date) / DAY_IN_SECONDS) < 6;
+                        
+                        $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > (18 * DAY_IN_SECONDS))) || 
+                            ($date_ts && $date_ts < $today);
+
+                        if ($is_new) {
+                            $row_style = 'background-color: #c5ff99;';
+                        } elseif ($is_stale) {
+                            $row_style = 'background-color: #faa0a0;';
+                        } else {
+                            $row_style = '';
+                        }
+
+                ?>
+                <tr style="<?=$row_style?>" class="anm-row" id="post-row-<?php echo $post_id; ?>">
+                    <td class="column-title has-row-actions">
+                        <strong style="display: inline-block;">
+                            <a class="row-title" href="<?=get_edit_post_link()?>"><?=esc_html(get_the_title())?></a>
+                            <span style="color:black;"><?=$status_label?></span>
+                        </strong>
+                        <div class="row-actions">
+                            <span class="edit"><a href="<?php echo get_edit_post_link(); ?>">Edit</a> | </span>
+                            <span class="move"><a href="#" class="anm-panel-trigger" data-target="move" style="color:#2271b1;">Move</a> | </span>
+                            <span class="clone"><a href="<?php echo wp_nonce_url(admin_url("admin-ajax.php?action=anm_clone_post&post_id=$post_id"), 'anm_clone_nonce'); ?>" onclick="return confirm('Clone to new draft?')">Clone</a> | </span>
+                            <span class="view"><a href="<?php the_permalink(); ?>" target="_blank">View</a> | </span>
+                            <span class="archive"><a href="#" class="anm-do-remove-notice" data-postid="<?php echo $post_id; ?>" data-catslug="<?php echo $cat_slug; ?>" style="color:#2271b1;">Archive</a> | </span>
+                            <span class="trash"><a href="#" class="anm-do-trash-post" data-postid="<?php echo $post_id; ?>" style="color:#d63638;">Bin</a></span>
+                        </div>
+
+                        <div class="anm-panel anm-move-panel" style="display:none; margin-top:5px; padding:10px; background:#f0f0f1; border-radius:3px; border:1px solid #ccd0d4; position:relative;">
+                            <a href="#" class="anm-close-panel" style="position:absolute; right:8px; top:5px; text-decoration:none; color:#666; font-weight:bold;">[X]</a>
+                            <small><strong>Move to Category:</strong></small><br>
+                            <?php foreach($categories as $dest): if($dest === $cat_slug) continue; ?>
+                                <button class="button button-small anm-do-move" data-postid="<?=$post_id?>" data-dest="<?=$dest?>" style="margin-top:4px;"><?=ucfirst($dest)?></button>
+                            <?php endforeach; ?>
+                        </div>
+                    </td>
+                    <td>
+                        <strong><?= $date_ts ? date('d/m/Y', $date_ts) : '—'; ?></strong>
+                    </td>
+                    <td><?= get_the_date('d/m/Y') ?></td>
+                    <td style="text-align:center;">
+                        <?= $img_flag ?> 
+                    </td>
+                    <td style="text-align:center;">
+                        <?= $excerpt_flag ?>
+                    </td>
+                    <td>
+                        <select class="notice-tag-changer" data-postid="<?= the_ID() ?>" data-catslug="<?= $cat_slug ?>">
+                            <?php foreach ($cat_suffixes as $sfx) : $tag_value = $cat_slug . '-' . $sfx; ?>
+                                <option value="<?= $tag_value ?>" <?= selected($active_tag, $tag_value) ?>>
+                                    <?= isset($tag_labels[$sfx]) ? $tag_labels[$sfx] : ucfirst($sfx) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <span class="spinner" style="float:none;"></span>
+                    </td>
+                </tr>
+                <?php endwhile; wp_reset_postdata(); else : ?>
+                <tr><td colspan="7">No posts found.</td></tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+        <?php
+    }
+    ?>
+    </div>
+    <script>
+    jQuery(document).ready(function($) {
+        // Toggle Panels
+        $('.anm-panel-trigger').on('click', function(e){ 
+            e.preventDefault(); 
+            var type = $(this).data('target');
+            $(this).closest('td').find('.anm-panel').hide(); // Hide others
+            $(this).closest('td').find('.anm-' + type + '-panel').slideDown(100); 
+        });
+
+        // Close Panels
+        $('.anm-close-panel').on('click', function(e){ e.preventDefault(); $(this).closest('.anm-panel').slideUp(100); });
+        
+        // Execute Move
+        $('.anm-do-move').on('click', function(){
+            var btn = $(this); btn.prop('disabled', true).text('...');
+            $.post(ajaxurl, { action: 'anm_move_post', post_id: btn.data('postid'), dest_cat: btn.data('dest'), nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>' }, function(res) { if(res.success) { location.reload(); } });
+        });
+
+        // Execute Archive (Remove Tag)
+        $('.anm-do-remove-notice').on('click', function(e){
+            e.preventDefault();
+            var btn = $(this); 
+            var pid = btn.data('postid'); 
+            btn.css('opacity', '0.5').text('Archiving...');
+            
+            $.post(ajaxurl, { 
+                action: 'anm_update_tag', 
+                post_id: pid, 
+                tag: 'none', 
+                cat_slug: btn.data('catslug'), 
+                nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>' 
+            }, function(res) { 
+                if(res.success) { $('#post-row-'+pid).fadeOut(); } 
+            });
+        });
+
+        // Execute Trash Post (The double-check)
+        $('.anm-do-trash-post').on('click', function(e){
+            e.preventDefault();
+            if(!confirm("Are you sure you want to move this post to the TRASH? This removes it from the website entirely.")) return;
+            
+            var btn = $(this); 
+            var pid = btn.data('postid'); 
+            btn.css('opacity', '0.5').text('Trashing...');
+            
+            $.post(ajaxurl, { 
+                action: 'anm_trash_post', 
+                post_id: pid, 
+                nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>' 
+            }, function(res) { 
+                if(res.success) { $('#post-row-'+pid).fadeOut(); } 
+            });
+        });
+
+        $('.notice-tag-changer').on('change', function() {
+            var $select = $(this), $spinner = $select.next('.spinner');
+            $spinner.addClass('is-active');
+            $.post(ajaxurl, { 
+                action: 'anm_update_tag', 
+                post_id: $select.data('postid'), 
+                tag: $select.val(), 
+                cat_slug: $select.data('catslug'), 
+                nonce: '<?=wp_create_nonce("anm_nonce")?>' 
+            }, function(res) { 
+                $spinner.removeClass('is-active');
+                if(!res.success) { 
+                    alert('Save failed');
+                }
+            });
+        });
+    });
+    </script>
+    <?php
+}
+
+
+add_action('wp_insert_post', function($post_id, $post, $update) {
+    if ($update) return; 
+    if (isset($_REQUEST['pre_cat'])) wp_set_post_categories($post_id, [intval($_REQUEST['pre_cat'])]);
+    if (isset($_REQUEST['pre_tag'])) wp_set_post_tags($post_id, sanitize_text_field($_REQUEST['pre_tag']), true);
+}, 10, 3);
+
+// AJAX handlers (unchanged from 3.4 logic)
+add_action('wp_ajax_anm_move_post', function() {
+    check_ajax_referer('anm_nonce', 'nonce');
+    $post_id = intval($_POST['post_id']);
+    $dest_slug = sanitize_text_field($_POST['dest_cat']);
+    if (!current_user_can('edit_post', $post_id)) wp_send_json_error();
+    $cat = get_category_by_slug($dest_slug);
+    if ($cat) wp_set_post_categories($post_id, [$cat->term_id]);
+    $all_slugs = ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'];
+    $current_tags = wp_get_post_tags($post_id);
+    foreach($current_tags as $tag) {
+        foreach($all_slugs as $slug) {
+            if(strpos($tag->slug, $slug . '-') === 0) {
+                $suffix = str_replace($slug . '-', '', $tag->slug);
+                wp_remove_object_terms($post_id, $tag->term_id, 'post_tag');
+                wp_set_post_terms($post_id, $dest_slug . '-' . $suffix, 'post_tag', true);
+            }
+        }
+    }
+    anm_purge_notice_caches($post_id);
+    wp_send_json_success();
+});
+
+add_action('wp_ajax_anm_update_tag', function() {
+    check_ajax_referer('anm_nonce', 'nonce');
+    $post_id = intval($_POST['post_id']);
+    $cat_slug = sanitize_text_field($_POST['cat_slug']);
+    $new_tag = sanitize_text_field($_POST['tag']);
+    $all_suffixes = ['full', 'short', 'list', 'website'];
+    $tags_to_strip = []; foreach($all_suffixes as $s) { $tags_to_strip[] = $cat_slug . '-' . $s; }
+    if (current_user_can('edit_post', $post_id)) {
+        wp_remove_object_terms($post_id, $tags_to_strip, 'post_tag');
+        if ($new_tag !== 'none') wp_set_post_terms($post_id, $new_tag, 'post_tag', true);
+        anm_purge_notice_caches($post_id);
+        wp_send_json_success();
+    }
+    wp_send_json_error();
+});
+
+add_action('wp_ajax_anm_trash_post', function() {
+    check_ajax_referer('anm_nonce', 'nonce');
+    $post_id = intval($_POST['post_id']);
+    if (current_user_can('delete_post', $post_id)) {
+        wp_trash_post($post_id); 
+        anm_purge_notice_caches($post_id);
+        wp_send_json_success(); 
+    }
+    wp_send_json_error();
+});
+
+add_action('wp_ajax_anm_clone_post', function() {
+    check_admin_referer('anm_clone_nonce');
+    $post_id = intval($_GET['post_id']);
+    $post = get_post($post_id);
+    $new_id = wp_insert_post(['post_title'=>$post->post_title.' (Copy)','post_content'=>$post->post_content,'post_excerpt'=>$post->post_excerpt,'post_status'=>'draft','post_type'=>$post->post_type]);
+    $taxonomies = get_object_taxonomies($post->post_type);
+    foreach ($taxonomies as $tax) { $terms = wp_get_object_terms($post_id, $tax, ['fields' => 'ids']); wp_set_object_terms($new_id, $terms, $tax); }
+    $meta = get_post_custom($post_id);
+    foreach ($meta as $key => $values) { foreach ($values as $value) add_post_meta($new_id, $key, maybe_unserialize($value)); }
+    anm_purge_notice_caches($post_id);
+    wp_redirect(admin_url('post.php?action=edit&post=' . $new_id));
+    exit;
+});
+

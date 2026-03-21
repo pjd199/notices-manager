@@ -43,6 +43,7 @@ jobs:
           mkdir -p ${{ env.PLUGIN_SLUG }}
           
           # Copy all source files into that folder
+          cp -r src ${{ env.PLUGIN_SLUG }}/
           cp -r ${{ env.PLUGIN_SLUG }}.php ${{ env.PLUGIN_SLUG }}/
           
           # Include root README if available
