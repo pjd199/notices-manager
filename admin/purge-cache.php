@@ -1,6 +1,6 @@
 <?php
 
-namespace AdvacncedNoticesManager;
+namespace AdvancedNoticesManager;
 
 /**
  * Custom helper to purge LiteSpeed cache for specific notice-related pages.

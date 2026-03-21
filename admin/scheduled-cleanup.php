@@ -1,6 +1,6 @@
 <?php
 
-namespace AdvacncedNoticesManager;
+namespace AdvancedNoticesManager;
 
 /**
  * Scheduled Task: Remove tags from expired events daily at 12:01
@@ -70,7 +70,7 @@ function anm_do_expired_cleanup() {
         ],
     ];
 
-    $query = new WP_Query($args);
+    $query = new \WP_Query($args);
 
     if (!$query->have_posts()) return;
 

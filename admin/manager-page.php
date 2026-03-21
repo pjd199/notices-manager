@@ -1,6 +1,6 @@
 <?php
 
-namespace AdvacncedNoticesManager;
+namespace AdvancedNoticesManager;
 
 function anm_render_page() {
     ?>
@@ -60,7 +60,7 @@ function anm_render_page() {
             $args['order']    = 'ASC';
         } 
 
-        $query = new WP_Query($args);
+        $query = new \WP_Query($args);
         
         $default_tag = ($cat_slug === 'introduction' || $cat_slug === 'prayer') ? "{$cat_slug}-full" : "{$cat_slug}-short";
         $new_post_url = admin_url("post-new.php?pre_cat={$cat_obj->term_id}&pre_tag={$default_tag}");
