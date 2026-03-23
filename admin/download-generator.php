@@ -2,7 +2,60 @@
 
 namespace AdvancedNoticesManager;
 
+function get_organized_data_from_ids($id_array) {
+    // If the array is empty or not an array, return early.
+    if (empty($id_array) || !is_array($id_array)) {
+        return [];
+    }
 
+    $categories = ['introduction', 'news', 'events', 'jobs', 'prayer', 'volunteering'];
+    $data = [];
+
+    // Run post query
+    $all_posts = get_posts([
+        'post__in'       => $id_array,
+        'category_name'  => implode(',', $categories),
+        'posts_per_page' => -1,
+        'post_status'    => 'publish',
+    ]);
+    if (empty($all_posts)) return $data;
+
+    // Group posts by category
+    foreach ($all_posts as $post) {
+        foreach ($categories as $cat) {
+            if (has_category($cat, $post)) {
+                $data[$cat][] = $post;
+                break; 
+            }
+        }
+    }
+
+    // Sort each group individually, with date sorting for events
+    foreach ($data as $cat => &$posts) {
+        if ($cat === 'events') {
+            usort($posts, function($a, $b) {
+                $date_a = get_post_meta($a->ID, 'event_start', true);
+                $date_b = get_post_meta($b->ID, 'event_start', true);
+        
+                // If both are missing, sort by title as a fallback
+                if (empty($date_a) && empty($date_b)) {
+                    return strcmp($a->post_title, $b->post_title);
+                }
+        
+                // If only one is missing, push the missing one to the end
+                if (empty($date_a)) return 1;
+                if (empty($date_b)) return -1;
+        
+                // Both have dates, sort normally
+                return strcmp($date_a, $date_b);
+            });
+        }
+    }
+
+    return $data;
+}
+
+/*
 function get_organized_data_from_ids($id_array) {
     $categories = ['introduction', 'news', 'events', 'jobs', 'prayer', 'volunteering'];
     $data = [];
@@ -16,7 +69,7 @@ function get_organized_data_from_ids($id_array) {
         if ($posts) $data[$cat] = $posts;
     }
     return $data;
-}
+}*/
 
 function parse_node_to_word($node, &$section) {
     // Check for Text Nodes (Type 3)
