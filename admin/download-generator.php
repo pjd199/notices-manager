@@ -2,51 +2,19 @@
 
 namespace AdvancedNoticesManager;
 
-function get_organized_data_from_ids($id_array) {
-    if (empty($id_array)) return [];
 
+function get_organized_data_from_ids($id_array) {
     $categories = ['introduction', 'news', 'events', 'jobs', 'prayer', 'volunteering'];
     $data = [];
-
     foreach ($categories as $cat) {
         $args = [
-            'post__in'       => $id_array,
-            'category_name'  => $cat,
-            'post_status'    => 'publish',
-            'posts_per_page' => -1,
+            'post__in' => $id_array, 'category_name' => $cat,
+            'orderby' => ($cat === 'events') ? 'meta_value' : 'title', 'order' => 'ASC'
         ];
-
-        if ($cat === 'events') {
-            // Complex query to allow posts WITHOUT the start date
-            $args['meta_query'] = array(
-                'relation' => 'OR',
-                'exists_clause' => array(
-                    'key'     => 'event_start',
-                    'compare' => 'EXISTS',
-                ),
-                'not_exists_clause' => array(
-                    'key'     => 'event_start',
-                    'compare' => 'NOT EXISTS',
-                ),
-            );
-
-            // Sort by the exists_clause (event_start), then fallback to date
-            $args['orderby'] = array(
-                'exists_clause' => 'ASC',
-                'date'          => 'DESC' 
-            );
-        } else {
-            // Standard sort for other categories
-            $args['orderby'] = 'date';
-            $args['order']   = 'DESC';
-        }
-
+        if ($cat === 'events') { $args['meta_key'] = 'event_start'; $args['meta_type'] = 'DATETIME'; }
         $posts = get_posts($args);
-        if (!empty($posts)) {
-            $data[$cat] = $posts;
-        }
+        if ($posts) $data[$cat] = $posts;
     }
-
     return $data;
 }
 
@@ -135,7 +103,7 @@ function get_purifier() {
     $config = \HTMLPurifier_Config::createDefault();
 
     // Only allow the elements you actually need
-    $config->set('HTML.Allowed', 'p,br,strong,b,em,i,ul,ol,li,a[href]');
+    $config->set('HTML.Allowed', 'p,br,strong,b,em,i,ul,ol,li,a[href],sup,sub');
 
     // Strip all inline styles and classes
     $config->set('CSS.AllowedProperties', []);
@@ -151,7 +119,7 @@ function get_purifier() {
     if (!is_dir($cache_path)) wp_mkdir_p($cache_path);
     $config->set('Cache.SerializerPath', $cache_path);
 
-    $purifier = new HTMLPurifier($config);
+    $purifier = new \HTMLPurifier($config);
     return $purifier;
 }
 
@@ -170,20 +138,29 @@ add_action('template_redirect', function() {
     
     $archive = $wpdb->get_row("SELECT * FROM " . ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE . " WHERE id = $id");
     if (!$archive) wp_die('Archive not found.');
-
     $data = get_organized_data_from_ids(explode(',', $archive->post_ids));
 
+    $purifier = get_purifier();
+    
     // --- HTML VIEW ---
     if ($html_id) {
-        echo '<html><body style="max-width:800px; margin:auto; font-family:sans-serif;">';
-        echo '<div style="background:#eee; padding:10px;"><a href="?download_docx='.$id.'">Save DOCX</a> | <a href="?download_pdf='.$id.'">Save PDF</a></div>';
+        
+        $html = '<html><body style="max-width:800px; margin:auto; font-family:sans-serif;">';
+        $html .= '<div style="background:#eee; padding:10px;"><a href="?notice_archive_docx='.$id.'">Save DOCX</a> | <a href="?notice_archive_pdf='.$id.'">Save PDF</a></div>';
         foreach ($data as $cat => $posts) {
-            echo "<h1>".strtoupper($cat)."</h1>";
+            $html .= "<h1>".strtoupper($cat)."</h1>";
+            $add_hr = false;
             foreach($posts as $p) {
-                echo "<h2>{$p->post_title}</h2><div>".wpautop($p->post_content)."</div><hr>";
+                if ($add_hr) {
+                    $html .= '<hr style="border: 0; border-top: 1px solid #333333; margin: 20px 0;">';
+                }
+                $clean_content = $purifier->purify($p->post_content);
+                $html .= '<h2>' . $p->post_title . '</h2>';
+                $html .= '<div>'.$clean_content . '</div>';
             }
         }
-        echo '</body></html>';
+        $html .= '</body></html>';
+        echo $html;
         exit;
     }
 
@@ -323,12 +300,42 @@ add_action('template_redirect', function() {
     if ($pdf_id) {
         if (ob_get_length()) ob_end_clean();
         $dompdf = new \Dompdf\Dompdf();
-        $html = '<html><style>body{font-family:sans-serif;} h2{background:#f0f0f0; padding:5px;}</style><body>';
+        
+        
+
+        $html = '<html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <style>
+                            body {
+                                font-family: sans-serif;
+                            }
+                            h1 {
+                                text-align: center;
+                            }
+                            h2 {
+                                background:#f0f0f0;
+                                padding:5px;
+                            }
+                            h1, h2, h3, h4, h5, h6 {
+                                break-after: avoid;
+                                page-break-after: avoid;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>Horsham Churches Together</h1>';
         foreach($data as $cat => $posts) {
             $html .= '<h2>'.strtoupper($cat).'</h2>';
+            $add_hr = false;
             foreach($posts as $p) {
+                if ($add_hr) {
+                    $html .= '<hr style="border: 0; border-top: 1px solid #333333; margin: 20px 0;">';
+                }
                 $clean_content = $purifier->purify($p->post_content);
-                $html .= '<h3>'.$p->post_title.'</h3><div>'.$clean_content.'</div>';
+                $html .= '<h3>'.$p->post_title.'</h3>';
+                $html .= '<div>'.$clean_content.'</div>';
+                $add_hr = true;
             }
         }
         $html .= '</body></html>';
