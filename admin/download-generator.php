@@ -128,6 +128,33 @@ function process_inline_tags($node, &$textRun) {
     }
 }
 
+function get_purifier() {
+    static $purifier = null;
+    if ($purifier) return $purifier;
+
+    $config = \HTMLPurifier_Config::createDefault();
+
+    // Only allow the elements you actually need
+    $config->set('HTML.Allowed', 'p,br,strong,b,em,i,ul,ol,li,a[href]');
+
+    // Strip all inline styles and classes
+    $config->set('CSS.AllowedProperties', []);
+    $config->set('HTML.AllowedAttributes', 'a.href');
+
+    // Force links to be absolute (prevents relative link weirdness in DOCX/PDF)
+    $config->set('URI.Base', get_site_url());
+    $config->set('URI.MakeAbsolute', true);
+
+    // Cache dir — use WordPress uploads so it's writable
+    $upload_dir = wp_upload_dir();
+    $cache_path = $upload_dir['basedir'] . '/htmlpurifier-cache';
+    if (!is_dir($cache_path)) wp_mkdir_p($cache_path);
+    $config->set('Cache.SerializerPath', $cache_path);
+
+    $purifier = new HTMLPurifier($config);
+    return $purifier;
+}
+
 add_action('template_redirect', function() {
     global $wpdb;
     // Re-check inside the hook to be safe
@@ -300,7 +327,8 @@ add_action('template_redirect', function() {
         foreach($data as $cat => $posts) {
             $html .= '<h2>'.strtoupper($cat).'</h2>';
             foreach($posts as $p) {
-                $html .= '<h3>'.$p->post_title.'</h3><div>'.wpautop($p->post_content).'</div>';
+                $clean_content = $purifier->purify($p->post_content);
+                $html .= '<h3>'.$p->post_title.'</h3><div>'.$clean_content.'</div>';
             }
         }
         $html .= '</body></html>';
