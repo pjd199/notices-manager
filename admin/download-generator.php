@@ -3,17 +3,50 @@
 namespace AdvancedNoticesManager;
 
 function get_organized_data_from_ids($id_array) {
+    if (empty($id_array)) return [];
+
     $categories = ['introduction', 'news', 'events', 'jobs', 'prayer', 'volunteering'];
     $data = [];
+
     foreach ($categories as $cat) {
         $args = [
-            'post__in' => $id_array, 'category_name' => $cat,
-            'orderby' => ($cat === 'events') ? 'meta_value' : 'title', 'order' => 'ASC'
+            'post__in'       => $id_array,
+            'category_name'  => $cat,
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
         ];
-        if ($cat === 'events') { $args['meta_key'] = 'event_start'; $args['meta_type'] = 'DATETIME'; }
+
+        if ($cat === 'events') {
+            // Complex query to allow posts WITHOUT the start date
+            $args['meta_query'] = array(
+                'relation' => 'OR',
+                'exists_clause' => array(
+                    'key'     => 'event_start',
+                    'compare' => 'EXISTS',
+                ),
+                'not_exists_clause' => array(
+                    'key'     => 'event_start',
+                    'compare' => 'NOT EXISTS',
+                ),
+            );
+
+            // Sort by the exists_clause (event_start), then fallback to date
+            $args['orderby'] = array(
+                'exists_clause' => 'ASC',
+                'date'          => 'DESC' 
+            );
+        } else {
+            // Standard sort for other categories
+            $args['orderby'] = 'date';
+            $args['order']   = 'DESC';
+        }
+
         $posts = get_posts($args);
-        if ($posts) $data[$cat] = $posts;
+        if (!empty($posts)) {
+            $data[$cat] = $posts;
+        }
     }
+
     return $data;
 }
 
@@ -29,8 +62,14 @@ function parse_node_to_word($node, &$section) {
     }
 
     switch ($node->nodeName) {
+        case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6':
+            $clean_text = htmlspecialchars($node->nodeValue, ENT_XML1, 'UTF-8');
+            $section->addText($clean_text, ['bold' => true]);
+            break;
+            
         case 'p':
         case 'div':
+        case 'span':
             // Create a new text run for the paragraph to handle nested <strong> or <a>
             $textRun = $section->addTextRun();
             foreach ($node->childNodes as $child) {
@@ -39,22 +78,23 @@ function parse_node_to_word($node, &$section) {
             break;
 
         case 'ul':
-            foreach ($node->getElementsByTagName('li') as $li) {
-                $clean_text = htmlspecialchars($li->nodeValue, ENT_XML1, 'UTF-8');
-                $section->addListItem($clean_text, 0, null, \PhpOffice\PhpWord\Style\ListItem::TYPE_BULLET_FILLED);
-            }
-            break;
-
         case 'ol':
-            foreach ($node->getElementsByTagName('li') as $li) {
-                $clean_text = htmlspecialchars($li->nodeValue, ENT_XML1, 'UTF-8');
-                $section->addListItem($clean_text, 0, null, \PhpOffice\PhpWord\Style\ListItem::TYPE_NUMBER);
+            $style = ($node->nodeName === 'ul') 
+                ? \PhpOffice\PhpWord\Style\ListItem::TYPE_BULLET_FILLED 
+                : \PhpOffice\PhpWord\Style\ListItem::TYPE_NUMBER;
+        
+            foreach ($node->childNodes as $li) {
+                // Skip whitespace nodes between <li> tags
+                if ($li->nodeName !== 'li') continue;
+        
+                // addListItemRun allows us to put links/bold/italics inside a bullet
+                $listItemRun = $section->addListItemRun(0, $style);
+                
+                // Process the contents of the <li> just like a paragraph
+                foreach ($li->childNodes as $child) {
+                    process_inline_tags($child, $listItemRun);
+                }
             }
-            break;
-
-        case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6':
-            $clean_text = htmlspecialchars($node->nodeValue, ENT_XML1, 'UTF-8');
-            $section->addText($clean_text, ['bold' => true]);
             break;
     }
 }
@@ -113,7 +153,7 @@ add_action('template_redirect', function() {
         foreach ($data as $cat => $posts) {
             echo "<h1>".strtoupper($cat)."</h1>";
             foreach($posts as $p) {
-                echo "<h3>{$p->post_title}</h3><div>".wpautop($p->post_content)."</div><hr>";
+                echo "<h2>{$p->post_title}</h2><div>".wpautop($p->post_content)."</div><hr>";
             }
         }
         echo '</body></html>';
@@ -126,21 +166,60 @@ add_action('template_redirect', function() {
         while (ob_get_level()) {
             ob_end_clean();
         }
-    
+
         $phpWord = new \PhpOffice\PhpWord\PhpWord();
-        
+ 
         // Set some basic metadata to help Word validate the file
-        $phpWord->getDocInfo()->setCreator('Advanced Notices Manager');
+        $phpWord->getDocInfo()->setCreator('Wordpress');
         $phpWord->getDocInfo()->setTitle("Notices - " . $archive->archive_date);
-    
-        // Add styles    
-        $phpWord->setDefaultFontName('Arial');
-        $phpWord->setDefaultFontSize(11);
-        $phpWord->addTitleStyle(1, ['bold' => true, 'size' => 20, 'name' => 'Arial'], ['spaceAfter' => 240]);
-        $phpWord->addTitleStyle(2, ['bold' => true, 'size' => 14, 'name' => 'Arial'], ['spaceAfter' => 120]);
 
+        // Add styles
+        $headingStyle = array('name' => 'Verdana', 'size' => 20, 'bold' => true, 'color' => '333333');
+        $phpWord->addTitleStyle(1, [...$headingStyle, 'size' => 16], array('spaceAfter' => 240, 'keepNext' => true));
+        $phpWord->addTitleStyle(2, [...$headingStyle, 'size' => 14], array('spaceAfter' => 120, 'keepNext' => true));
+        $phpWord->addTitleStyle(3, [...$headingStyle, 'size' => 12], array('spaceAfter' => 120, 'keepNext' => true));
+        
+        $phpWord->setDefaultFontName('Georgia');
+        $phpWord->setDefaultFontSize(12);
+        $phpWord->setDefaultFontColor('333333');
+        
+        $phpWord->addNumberingStyle(
+            'bulletStyle',
+            array(
+                'type' => 'multilevel',
+                'levels' => array(
+                    array('level' => 0, 'format' => 'bullet', 'text' => '•', 'left' => 360, 'hanging' => 360),
+                    array('level' => 1, 'format' => 'bullet', 'text' => '○', 'left' => 720, 'hanging' => 360),
+                ),
+            )
+        );
 
-        $section = $phpWord->addSection();
+        $section = $phpWord->addSection([
+            'paperSize'    => 'A4',
+            'marginTop'    => 1134,
+            'marginBottom' => 1134,
+            'marginLeft'   => 1134,
+            'marginRight'  => 1134,
+        ]);
+        
+        $section->addText(
+            'Horsham Churches Together', 
+            [...$headingStyle, 'size' => 28],
+            array('alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER, 'spaceAfter' => 240) // Paragraph Style
+        );
+        
+        // Create the TOC
+        $section->addTitle("Contents", 2);
+        foreach ($data as $cat => $posts) {
+            // Category Heading
+            $section->addTitle(ucfirst($cat), 3);
+            
+            foreach ($posts as $p) {
+                $textRun = $section->addTextRun(array('numStyle' => 'bulletStyle', 'depth' => 0, 'spaceAfter' => 60));
+                $textRun->addLink('#' . strval($p->ID), $p->post_title, array('color' => '0000FF', 'underline' => 'single'));
+            }
+        }
+        $section->addTextBreak(1);
     
         foreach ($data as $cat => $posts) {
             // Add a Title style for categories
@@ -148,14 +227,26 @@ add_action('template_redirect', function() {
 
             foreach ($posts as $p) {
 
-                // 1. Add the Title
+                // Add the Title
+                $section->addBookmark($p->ID);
                 $section->addTitle($p->post_title, 2);
-
-                $dom = new \DOMDocument();
-                // Use the UTF-8 Meta Tag trick to fix the Â and â€™ symbols
-                $html_string = '<?xml encoding="UTF-8"><html><body>' . $p->post_content . '</body></html>';
                 
-                // Load with error silencing
+                // Add the event date and time, is set
+                $event_start_raw = get_field('event_start', $p->ID);
+                
+                if ($event_start_raw) {
+                    // ACF Date Time Picker usually returns 'Y-m-d H:i:s' or a timestamp.
+                    // We convert it to a DateTime object to be 100% safe.
+                    $date = new \DateTime($event_start_raw);
+                    $event_label = $date->format('l jS F Y \a\t g:ia');
+                
+                    // Add to your Word document under the title
+                    $section->addText($event_label, array('italic' => true, 'color' => '333333'), array('keepNext' => true));
+                }
+                
+                // add the body
+                $dom = new \DOMDocument();
+                $html_string = '<?xml encoding="UTF-8"><html><head><meta charset="UTF-8"></head><body>' . $p->post_content . '</body></html>';
                 @$dom->loadHTML($html_string, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
             
                 // Get the body element we just created
@@ -163,22 +254,25 @@ add_action('template_redirect', function() {
             
                 if ($body && $body->hasChildNodes()) {
                     foreach ($body->childNodes as $node) {
-                        // Log to see if we are actually hitting nodes now
-                        //error_log("ANM Logic - Processing Node: " . $node->nodeName);
-                        
                         parse_node_to_word($node, $section);
                     }
                 } else {
-                    error_log("ANM Error - No nodes found for post: " . $p->post_title);
-                    // Fallback: if DOM fails, just add the stripped text
                     $section->addText(strip_tags($p->post_content));
                 }
-              
-                $section->addTextBreak(1); // Space between notices
+                $section->addTextBreak(1);
             }
-            // Page break between categories? (Optional)
-            //$section->addPageBreak();
         }
+        
+        // Add the page numbers
+        // 1. Create the footer
+        $footer = $section->addFooter();
+        $footerRun = $footer->addTextRun(array(
+            'alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER,
+            'spaceBefore' => \PhpOffice\PhpWord\Shared\Converter::pointToTwip(10) // Optional: gap from body
+        ));
+        $footerRun->addField('PAGE', array('format' => 'Arabic'));
+        $footerRun->addText(' / ');
+        $footerRun->addField('NUMPAGES', array('format' => 'Arabic'));
     
         // 2. Set strict headers to force the browser to treat this as a binary file
         header('Content-Description: File Transfer');
@@ -202,14 +296,15 @@ add_action('template_redirect', function() {
     if ($pdf_id) {
         if (ob_get_length()) ob_end_clean();
         $dompdf = new \Dompdf\Dompdf();
-        ob_start();
-        echo '<html><style>body{font-family:sans-serif;} h2{background:#f0f0f0; padding:5px;}</style><body>';
+        $html = '<html><style>body{font-family:sans-serif;} h2{background:#f0f0f0; padding:5px;}</style><body>';
         foreach($data as $cat => $posts) {
-            echo "<h2>".strtoupper($cat)."</h2>";
-            foreach($posts as $p) echo "<h3>{$p->post_title}</h3><div>".wpautop($p->post_content)."</div>";
+            $html .= '<h2>'.strtoupper($cat).'</h2>';
+            foreach($posts as $p) {
+                $html .= '<h3>'.$p->post_title.'</h3><div>'.wpautop($p->post_content).'</div>';
+            }
         }
-        echo '</body></html>';
-        $dompdf->loadHtml(ob_get_clean());
+        $html .= '</body></html>';
+        $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
         $dompdf->stream("Notices-{$archive->archive_date}.pdf");
