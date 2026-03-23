@@ -55,22 +55,6 @@ function get_organized_data_from_ids($id_array) {
     return $data;
 }
 
-/*
-function get_organized_data_from_ids($id_array) {
-    $categories = ['introduction', 'news', 'events', 'jobs', 'prayer', 'volunteering'];
-    $data = [];
-    foreach ($categories as $cat) {
-        $args = [
-            'post__in' => $id_array, 'category_name' => $cat,
-            'orderby' => ($cat === 'events') ? 'meta_value' : 'title', 'order' => 'ASC'
-        ];
-        if ($cat === 'events') { $args['meta_key'] = 'event_start'; $args['meta_type'] = 'DATETIME'; }
-        $posts = get_posts($args);
-        if ($posts) $data[$cat] = $posts;
-    }
-    return $data;
-}*/
-
 function parse_node_to_word($node, &$section) {
     // Check for Text Nodes (Type 3)
     if ($node->nodeType === 3) {
