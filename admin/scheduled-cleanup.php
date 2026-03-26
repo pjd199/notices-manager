@@ -5,32 +5,24 @@ namespace AdvancedNoticesManager;
 /**
  * Scheduled Task: Remove tags from expired events daily at 12:01
  */
-
-// Register a custom daily schedule at 12:01
-add_filter('cron_schedules', function($schedules) {
-    return $schedules; // We'll use WP's built-in 'daily', offset via wp_schedule_event
-});
-
-// Hook to run on activation
-register_activation_hook(__FILE__, function () {
+ function register_expired_cleanup_task() {
     if (!wp_next_scheduled('anm_expired_cleanup')) {
         // Calculate next 00:01 in site's local time
         $timezone = wp_timezone();
-        $next_run = new DateTime('today 00:01', $timezone);
+        $next_run = new \DateTime('today 00:01', $timezone);
         if ($next_run->getTimestamp() <= time()) {
             $next_run->modify('+1 day');
         }
         wp_schedule_event($next_run->getTimestamp(), 'daily', 'anm_expired_cleanup');
     }
-});
+}
 
-// Hook to clear on deactivation
-register_deactivation_hook(__FILE__, function() {
+function deregister_expired_cleanup_task() {
     wp_clear_scheduled_hook('anm_expired_cleanup');
-});
+}
 
 // The actual cleanup task
-add_action('anm_expired_cleanup', function() {
+add_action('anm_expired_cleanup', function () {
     $today = date('Y-m-d'); // Current date in ISO format for reliable comparison
     $controlled_tags = [
         'introduction-full',

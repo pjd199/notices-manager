@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.30
+ * Version: 1.0.31
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
@@ -21,9 +21,9 @@ if (file_exists(plugin_dir_path(__FILE__) . 'vendor/autoload.php')) {
 }
 
 // include Sub-modules
+require_once plugin_dir_path(__FILE__) . 'admin/purge-cache.php';
+require_once plugin_dir_path(__FILE__) . 'admin/scheduled-cleanup.php';
 if ( is_admin() ) {
-    require_once plugin_dir_path(__FILE__) . 'admin/purge-cache.php';
-    require_once plugin_dir_path(__FILE__) . 'admin/scheduled-cleanup.php';
     require_once plugin_dir_path(__FILE__) . 'admin/manager-page.php';
     require_once plugin_dir_path(__FILE__) . 'admin/archive-page.php';
 }
@@ -33,6 +33,10 @@ require_once plugin_dir_path(__FILE__) . 'admin/download-generator.php';
 add_action('admin_menu', function () {
     add_submenu_page('edit.php', 'Notices Manager', 'Notices Manager', 'manage_options', 'notices-manager', __NAMESPACE__ .'\anm_render_page');
 });
+
+// Register cleanup tasks
+register_activation_hook(__FILE__, __NAMESPACE__.'\register_expired_cleanup_task');
+register_deactivation_hook(__FILE__, __NAMESPACE__.'\deregister_expired_cleanup_task');
 
 register_activation_hook(__FILE__, function() {
     global $wpdb;
