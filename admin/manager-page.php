@@ -111,7 +111,16 @@ function anm_render_page() {
                         } else {
                             $img_flag = '<span style="color:red;">✘</span>';
                         }
-                        $excerpt_flag = has_excerpt() ? '<span style="color:green;">✔</span>' : '<span style="color:red;">✘</span>';
+                        if (has_excerpt()) {
+                            $excerpt_length = mb_strlen(get_the_excerpt());
+                            if ($excerpt_length >= $min_length && $excerpt_length <= 240) {
+                                $excerpt_flag = '<span style="color:green;">✔</span>';
+                            } else {
+                                $excerpt_flag = '<span style="color:orange;" title="Length: ' . $excerpt_length . ' chars (Aim for 10-240)">⚠</span>';
+                            }
+                        } else {
+                            $excerpt_flag = '<span style="color:red;">✘</span>';
+                        }
                         
                         if ($status !== 'publish') {
                             $status_labels = ['draft' => 'Draft', 'future' => 'Scheduled', 'pending' => 'Pending', 'private' => 'Private'];
