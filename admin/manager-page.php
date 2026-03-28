@@ -111,15 +111,16 @@ function anm_render_page() {
                         } else {
                             $img_flag = '<span style="color:red;">✘</span>';
                         }
+                        
                         if (has_excerpt()) {
-                            $excerpt_length = mb_strlen(get_the_excerpt());
-                            if ($excerpt_length >= $min_length && $excerpt_length <= 240) {
-                                $excerpt_flag = '<span style="color:green;">✔</span>';
+                            $word_count = str_word_count(strip_tags(get_the_excerpt()));
+                            if ($word_count >= 15 && $word_count <= 35) {
+                                $excerpt_flag = '<span style="color:green;" title="'.$word_count.' words">✔</span>';
                             } else {
-                                $excerpt_flag = '<span style="color:orange;" title="Length: ' . $excerpt_length . ' chars (Aim for 10-240)">⚠</span>';
+                                $excerpt_flag = '<span style="color:orange;" title="'.$word_count.'" words. Aim for 20-30">⚠</span>';
                             }
                         } else {
-                            $excerpt_flag = '<span style="color:red;">✘</span>';
+                            $excerpt_flag = '<span style="color:red; title="Excerpt required">✘</span>';
                         }
                         
                         if ($status !== 'publish') {
