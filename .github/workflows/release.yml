@@ -59,7 +59,20 @@ jobs:
           path: ${{ env.PLUGIN_SLUG }}-${{ env.VERSION }}.zip
           retention-days: 7
       
+      - name: Check if release exists
+        id: check_release
+        run: |
+          if gh release view v${{ env.VERSION }} >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Release v${{ env.VERSION }} already exists. Skipping..."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
       - name: Create Release
+        if: steps.check_release.outputs.exists == 'false'
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ env.VERSION }}
