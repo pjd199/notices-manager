@@ -16,8 +16,13 @@ jobs:
   build_release:
     runs-on: ubuntu-latest
     steps:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+
       - name: Checkout Code
-        uses: actions/checkout@v4 # Updated to v4 for speed/security
+        uses: actions/checkout@v6
 
       - name: Get Plugin Version
         id: get_version
@@ -26,15 +31,14 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-
-      - name: Install Dependencies
+      - name: Build plugin
         run: |
           composer install --no-dev --optimize-autoloader
-          # This creates the 'vendor' folder that is vital for the plugin to work
+
+      - name: Generate zip
+        uses: 10up/action-wordpress-plugin-build-zip@stable
+        env:
+          SLUG: ${{ env.PLUGIN_SLUG }}
 
       - name: Prepare Plugin for Zipping
         run: |
