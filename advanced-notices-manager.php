@@ -23,11 +23,21 @@ if (file_exists(plugin_dir_path(__FILE__) . 'vendor/autoload.php')) {
 // include Sub-modules
 require_once plugin_dir_path(__FILE__) . 'admin/purge-cache.php';
 require_once plugin_dir_path(__FILE__) . 'admin/scheduled-cleanup.php';
+require_once plugin_dir_path(__FILE__) . 'admin/download-generator.php';
+
 if ( is_admin() ) {
     require_once plugin_dir_path(__FILE__) . 'admin/manager-page.php';
     require_once plugin_dir_path(__FILE__) . 'admin/archive-page.php';
 }
-require_once plugin_dir_path(__FILE__) . 'admin/download-generator.php';
+
+// Check for latest updates from GitHub
+$updateChecker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+	'https://github.com/pjd199/notices-manager/',
+	__FILE__,
+	'advanced-notices-manager'
+);
+$myUpdateChecker->setBranch('main');
+$myUpdateChecker->getVcsApi()->enableReleaseAssets('/advanced-notices-manager-\d+\.\d+\.\d+.\.zip($|[?&#])/i');
 
 /* Register menu item */
 add_action('admin_menu', function () {
