@@ -130,7 +130,7 @@ function anm_render_page() {
                             $status_label = '';
                         }
 
-                        $is_new = floor(($today - $pub_date) / DAY_IN_SECONDS) < 6;
+                        $is_new = floor(($today - $pub_date) / DAY_IN_SECONDS) < 5;
                         
                         $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > (18 * DAY_IN_SECONDS))) || 
                             ($date_ts && $date_ts < $today);
