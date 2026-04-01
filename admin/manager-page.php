@@ -115,7 +115,7 @@ function anm_render_page() {
                         if (has_excerpt()) {
                             $word_count = str_word_count(strip_tags(get_the_excerpt()));
                             if ($word_count >= 15 && $word_count <= 35) {
-                                $excerpt_flag = '<span style="color:green;" title="'.$word_count.' words">✔</span>';
+                                $excerpt_flag = '<span style="color:green;" title="'.$word_count.' words. Perfect.">✔</span>';
                             } else {
                                 $excerpt_flag = '<span style="color:orange;" title="'.$word_count.'" words. Aim for 20-30">⚠</span>';
                             }
