@@ -48,16 +48,38 @@ function create_automated_snapshot() {
     sort($unique_ids); 
     $new_post_ids_string = implode(',', $unique_ids);
 
-    $last_archive = $wpdb->get_row("SELECT post_ids FROM " . ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE . " ORDER BY archive_date DESC LIMIT 1");
+    // 1. Check if an archive for TODAY already exists
+    $today = date('Y-m-d');
+    $existing_today = $wpdb->get_row($wpdb->prepare(
+        "SELECT id, post_ids FROM " . ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE . " WHERE archive_date = %s",
+        $today
+    ));
 
-    if (!$last_archive || $last_archive->post_ids !== $new_post_ids_string) {
-        $wpdb->replace(ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE, [
-            'archive_date' => date('Y-m-d'), 
-            'post_ids'     => $new_post_ids_string
-        ]);
-        return true; 
+    // 2. Determine if we actually need to save
+    if ($existing_today) {
+        // If it exists for today, only update if the IDs changed
+        if ($existing_today->post_ids !== $new_post_ids_string) {
+            $wpdb->update(
+                ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE, 
+                ['post_ids' => $new_post_ids_string], 
+                ['id' => $existing_today->id]
+            );
+            return true;
+        }
+    } else {
+        // If no entry exists for today, check against the absolute LATEST archive
+        $last_archive = $wpdb->get_row("SELECT post_ids FROM " . ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE . " ORDER BY archive_date DESC LIMIT 1");
+        
+        if (!$last_archive || $last_archive->post_ids !== $new_post_ids_string) {
+            $wpdb->insert(ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE, [
+                'archive_date' => $today, 
+                'post_ids'     => $new_post_ids_string
+            ]);
+            return true;
+        }
     }
-    return false; 
+
+    return false;
 }
 
 add_action('advanced_notices_daily_archive', __NAMESPACE__ . '\create_automated_snapshot');
