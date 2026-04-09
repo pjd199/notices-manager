@@ -162,28 +162,59 @@ function get_purifier() {
 
 add_action('template_redirect', function() {
     global $wpdb;
-    // Re-check inside the hook to be safe
-    $docx_id = $_GET['notice_archive_docx'] ?? null;
-    $pdf_id  = $_GET['notice_archive_pdf'] ?? null;
-    $html_id = $_GET['notice_archive_html'] ?? null;
+    
+    // --- START LOGIC CHANGE: ID to DATE ---
+    
+    // Check which format is requested
+    $docx_req = isset($_GET['notice_archive_docx']);
+    $pdf_req  = isset($_GET['notice_archive_pdf']);
+    $html_req = isset($_GET['notice_archive_html']);
 
-    if (!$docx_id && !$pdf_id && !$html_id) {
+    if (!$docx_req && !$pdf_req && !$html_req) {
         return;
     }
 
-    $id = $id = intval($docx_id ?: ($pdf_id ?: $html_id));
-    
-    $archive = $wpdb->get_row("SELECT * FROM " . ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE . " WHERE id = $id");
+    // Capture date components
+    $year  = $_GET['notice_archive_year']  ?? null;
+    $month = $_GET['notice_archive_month'] ?? null;
+    $day   = $_GET['notice_archive_day']   ?? null;
+
+    $archive = null;
+
+    // Attempt to fetch by specific date if provided
+    if ($year && $month && $day) {
+        $target_date = sprintf('%04d-%02d-%02d', intval($year), intval($month), intval($day));
+        $archive = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM " . ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE . " WHERE archive_date = %s",
+            $target_date
+        ));
+    }
+
+    // Fallback: If date lookup fails or wasn't provided, get the latest entry
+    if (!$archive) {
+        $archive = $wpdb->get_row("SELECT * FROM " . ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE . " ORDER BY archive_date DESC LIMIT 1");
+    }
+
     if (!$archive) wp_die('Archive not found.');
+
+    // Map the archive ID for use in HTML view links
+    $id = $archive->id;
+    
+    // --- END LOGIC CHANGE ---
+
     $data = get_organized_data_from_ids(explode(',', $archive->post_ids));
 
     $purifier = get_purifier();
     
     // --- HTML VIEW ---
-    if ($html_id) {
+    if ($html_req) {
         
+        // Update save links to use date-based parameters for consistency
+        $d = explode('-', $archive->archive_date);
+        $date_query = "notice_archive_year={$d[0]}&notice_archive_month={$d[1]}&notice_archive_day={$d[2]}";
+
         $html = '<html><body style="max-width:800px; margin:auto; font-family:sans-serif;">';
-        $html .= '<div style="background:#eee; padding:10px;"><a href="?notice_archive_docx='.$id.'">Save DOCX</a> | <a href="?notice_archive_pdf='.$id.'">Save PDF</a></div>';
+        $html .= '<div style="background:#eee; padding:10px;"><a href="?notice_archive_docx=1&'.$date_query.'">Save DOCX</a> | <a href="?notice_archive_pdf=1&'.$date_query.'">Save PDF</a></div>';
         foreach ($data as $cat => $posts) {
             $html .= "<h1>".strtoupper($cat)."</h1>";
             $add_hr = false;
@@ -194,6 +225,7 @@ add_action('template_redirect', function() {
                 $clean_content = $purifier->purify($p->post_content);
                 $html .= '<h2>' . $p->post_title . '</h2>';
                 $html .= '<div>'.$clean_content . '</div>';
+                $add_hr = true;
             }
         }
         $html .= '</body></html>';
@@ -202,7 +234,7 @@ add_action('template_redirect', function() {
     }
 
     // --- DOCX GENERATION (Using PHPWord) ---
-    if ($docx_id) {
+    if ($docx_req) {
         // 1. Clear any accidental whitespace or warnings from other files
         while (ob_get_level()) {
             ob_end_clean();
@@ -276,12 +308,8 @@ add_action('template_redirect', function() {
                 $event_start_raw = get_field('event_start', $p->ID);
                 
                 if ($event_start_raw) {
-                    // ACF Date Time Picker usually returns 'Y-m-d H:i:s' or a timestamp.
-                    // We convert it to a DateTime object to be 100% safe.
                     $date = new \DateTime($event_start_raw);
                     $event_label = $date->format('l jS F Y \a\t g:ia');
-                
-                    // Add to your Word document under the title
                     $section->addText($event_label, array('italic' => true, 'color' => '333333'), array('keepNext' => true));
                 }
                 
@@ -305,17 +333,15 @@ add_action('template_redirect', function() {
         }
         
         // Add the page numbers
-        // 1. Create the footer
         $footer = $section->addFooter();
         $footerRun = $footer->addTextRun(array(
             'alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER,
-            'spaceBefore' => \PhpOffice\PhpWord\Shared\Converter::pointToTwip(10) // Optional: gap from body
+            'spaceBefore' => \PhpOffice\PhpWord\Shared\Converter::pointToTwip(10)
         ));
         $footerRun->addField('PAGE', array('format' => 'Arabic'));
         $footerRun->addText(' / ');
         $footerRun->addField('NUMPAGES', array('format' => 'Arabic'));
     
-        // 2. Set strict headers to force the browser to treat this as a binary file
         header('Content-Description: File Transfer');
         header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
         header('Content-Disposition: attachment; filename="Notices-' . $archive->archive_date . '.docx"');
@@ -324,7 +350,6 @@ add_action('template_redirect', function() {
         header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
         header('Pragma: public');
     
-        // 3. Clear buffer one last time before output
         if (ob_get_length()) ob_clean();
         flush();
     
@@ -334,30 +359,18 @@ add_action('template_redirect', function() {
     }
 
     // --- PDF GENERATION (Using Dompdf) ---
-    if ($pdf_id) {
+    if ($pdf_req) {
         if (ob_get_length()) ob_end_clean();
         $dompdf = new \Dompdf\Dompdf();
         
-        
-
         $html = '<html>
                     <head>
                         <meta charset="UTF-8">
                         <style>
-                            body {
-                                font-family: sans-serif;
-                            }
-                            h1 {
-                                text-align: center;
-                            }
-                            h2 {
-                                background:#f0f0f0;
-                                padding:5px;
-                            }
-                            h1, h2, h3, h4, h5, h6 {
-                                break-after: avoid;
-                                page-break-after: avoid;
-                            }
+                            body { font-family: sans-serif; }
+                            h1 { text-align: center; }
+                            h2 { background:#f0f0f0; padding:5px; }
+                            h1, h2, h3, h4, h5, h6 { break-after: avoid; page-break-after: avoid; }
                         </style>
                     </head>
                     <body>
