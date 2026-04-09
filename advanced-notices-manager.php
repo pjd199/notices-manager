@@ -21,6 +21,7 @@ if (file_exists(plugin_dir_path(__FILE__) . 'vendor/autoload.php')) {
 }
 
 // include Sub-modules
+require_once plugin_dir_path(__FILE__) . 'admin/excerpt-word-count.php';
 require_once plugin_dir_path(__FILE__) . 'admin/purge-cache.php';
 require_once plugin_dir_path(__FILE__) . 'admin/scheduled-cleanup.php';
 require_once plugin_dir_path(__FILE__) . 'admin/download-generator.php';
