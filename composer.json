@@ -1,5 +1,5 @@
 {
-    "name": "hct/advanced-notices-manager",
+    "name": "pjd199/advanced-notices-manager",
     "description": "Weekly Notices Management",
     "require": {
         "phpoffice/phpword": "^1.4",
