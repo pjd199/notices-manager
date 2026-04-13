@@ -122,25 +122,61 @@ function anm_render_page() {
         $cat_specific_tags = [];
         foreach ($cat_suffixes as $sfx) { $cat_specific_tags[] = $cat_slug . '-' . $sfx; }
 
-        $args = [
-            'post_type' => 'post',
-            'posts_per_page' => -1,
-            'post_status' => ['publish', 'pending', 'draft', 'future', 'private'],
-            'category_name' => $cat_slug,
-            'tax_query' => [['taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $cat_specific_tags]],
-            'orderby' => ($cat_slug === 'events') ? 'meta_value' : 'date',
-            'meta_key' => ($cat_slug === 'events') ? 'event_start_time' : '',
-            'meta_type' => ($cat_slug === 'events') ? 'DATETIME' : '',
-            'order' => ($cat_slug === 'events') ? 'ASC' : 'DESC',
-        ];
+        if ( $cat_slug === 'events' ) {
+            // Posts with event_start_time - ordered by date ASC
+            $args = [
+                'post_type'      => 'post',
+                'posts_per_page' => -1,
+                'post_status'    => [ 'publish', 'pending', 'draft', 'future', 'private' ],
+                'category_name'  => $cat_slug,
+                'tax_query'      => [ [ 'taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $cat_specific_tags ] ],
+                'orderby'        => 'meta_value',
+                'meta_key'       => 'event_start_time',
+                'meta_type'      => 'DATETIME',
+                'order'          => 'ASC',
+                'meta_query'     => [ [
+                    'key'     => 'event_start_time',
+                    'compare' => 'EXISTS',
+                ] ],
+            ];
+            $query = new \WP_Query( $args );
+            $dated_ids = wp_list_pluck( $query->posts, 'ID' );
 
-        $query = new \WP_Query($args);
+            // Posts missing event_start_time - shown at top as they need attention
+            $undated_args = [
+                'post_type'      => 'post',
+                'posts_per_page' => -1,
+                'post_status'    => [ 'publish', 'pending', 'draft', 'future', 'private' ],
+                'category_name'  => $cat_slug,
+                'tax_query'      => [ [ 'taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $cat_specific_tags ] ],
+                'meta_query'     => [ [
+                    'key'     => 'event_start_time',
+                    'compare' => 'NOT EXISTS',
+                ] ],
+                'orderby'        => 'date',
+                'order'          => 'DESC',
+            ];
+            $undated_query = new \WP_Query( $undated_args );
+        } else {
+            $args = [
+                'post_type'      => 'post',
+                'posts_per_page' => -1,
+                'post_status'    => [ 'publish', 'pending', 'draft', 'future', 'private' ],
+                'category_name'  => $cat_slug,
+                'tax_query'      => [ [ 'taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $cat_specific_tags ] ],
+                'orderby'        => 'date',
+                'order'          => 'DESC',
+            ];
+            $query = new \WP_Query( $args );
+            $undated_query = null;
+        }
+        $total_count = $query->found_posts + ( $undated_query ? $undated_query->found_posts : 0 );
         $default_tag = ($cat_slug === 'introduction' || $cat_slug === 'prayer') ? "{$cat_slug}-full" : "{$cat_slug}-short";
         $new_post_url = admin_url("post-new.php?pre_cat={$cat_obj->term_id}&pre_tag={$default_tag}");
         ?>
         
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px;">
-            <h2><?=esc_html($cat_obj->name)?><span class="count" style="font-weight:normal; color:#666;">(<?=$query->found_posts?>)</span></h2>
+            <h2><?=esc_html($cat_obj->name)?><span class="count" style="font-weight:normal; color:#666;">(<?=$total_count?>)</span></h2>
             <a href="<?=$new_post_url?>" class="button action">Add New Post</a>
         </div>
         <table class="wp-list-table widefat fixed striped posts" style="margin-bottom: 40px;">
@@ -155,16 +191,38 @@ function anm_render_page() {
                 </tr>
             </thead>
             <tbody>
-                <?php if ($query->have_posts()) : while ($query->have_posts()) : $query->the_post(); 
-                    $pid = get_the_ID();
-                    $content = anm_render_row_content($pid, $cat_slug, $categories);
-                    preg_match('/data-bg="([^"]*)"/', $content, $m);
-                    $bg_style = !empty($m[1]) ? "background-color:{$m[1]};" : "";
-                ?>
+                <?php 
+                $has_posts = false;
+
+                // Undated events first - they need attention
+                if ( $undated_query && $undated_query->have_posts() ) :
+                    while ( $undated_query->have_posts() ) : $undated_query->the_post();
+                        $has_posts = true;
+                        $pid     = get_the_ID();
+                        $content = anm_render_row_content( $pid, $cat_slug, $categories );
+                        preg_match( '/data-bg="([^"]*)"/', $content, $m );
+                        $bg_style = "background-color:#fff3cd;"; // Yellow to highlight missing date
+                        ?>
+                        <tr style="<?=$bg_style?>" class="anm-row" id="post-row-<?=$pid?>" data-postid="<?=$pid?>" data-catslug="<?=$cat_slug?>">
+                            <?=$content?>
+                        </tr>
+                    <?php endwhile; wp_reset_postdata();
+                endif;
+
+                // Dated events
+                if ( $query->have_posts() ) : while ( $query->have_posts() ) : $query->the_post();
+                    $has_posts = true;
+                    $pid     = get_the_ID();
+                    $content = anm_render_row_content( $pid, $cat_slug, $categories );
+                    preg_match( '/data-bg="([^"]*)"/', $content, $m );
+                    $bg_style = ! empty( $m[1] ) ? "background-color:{$m[1]};" : "";
+                    ?>
                     <tr style="<?=$bg_style?>" class="anm-row" id="post-row-<?=$pid?>" data-postid="<?=$pid?>" data-catslug="<?=$cat_slug?>">
                         <?=$content?>
                     </tr>
-                <?php endwhile; wp_reset_postdata(); else : ?>
+                <?php endwhile; wp_reset_postdata(); endif;
+
+                if ( ! $has_posts ) : ?>
                     <tr><td colspan="6">No posts found.</td></tr>
                 <?php endif; ?>
             </tbody>
