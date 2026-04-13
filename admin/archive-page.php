@@ -2,6 +2,8 @@
 
 namespace AdvancedNoticesManager;
 
+if (!defined('ABSPATH')) exit;
+
 add_action('admin_menu', function() {
     add_submenu_page('edit.php', 'Notices Archive', 'Notices Archive', 'manage_options', 'notices-archive', __NAMESPACE__ .'\render_notices_archive_page');
 });

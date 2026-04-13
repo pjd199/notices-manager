@@ -2,6 +2,8 @@
 
 namespace AdvancedNoticesManager;
 
+if (!defined('ABSPATH')) exit;
+
 /**
  * HELPER: Renders the internal content of a row.
  * Isolated so it can be called by the initial loop AND the AJAX refresh.
@@ -15,7 +17,7 @@ function anm_render_row_content($post_id, $cat_slug, $categories) {
     $modified = $post->post_modified; // Used to detect if post data changed
     $today = strtotime('today');
     
-    $date_raw = get_post_meta($post_id, ($cat_slug === 'events') ? "event_start" : "expire", true);
+    $date_raw = get_post_meta($post_id, ($cat_slug === 'events') ? "event_start_time" : "expiry_date", true);
     $date_ts = $date_raw ? strtotime($date_raw) : false;
     
     $current_tags = wp_get_post_tags($post_id, ['fields' => 'slugs']);
@@ -124,7 +126,8 @@ function anm_render_page() {
             'category_name' => $cat_slug,
             'tax_query' => [['taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $cat_specific_tags]],
             'orderby' => ($cat_slug === 'events') ? 'meta_value' : 'date',
-            'meta_key' => ($cat_slug === 'events') ? 'event_start' : '',
+            'meta_key' => ($cat_slug === 'events') ? 'event_start_time' : '',
+            'meta_type' => ($cat_slug === 'events') ? 'DATETIME' : '',
             'order' => ($cat_slug === 'events') ? 'ASC' : 'DESC',
         ];
 

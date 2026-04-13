@@ -1,4 +1,9 @@
 <?php
+
+namespace AdvancedNoticesManager;
+
+if (!defined('ABSPATH')) exit;
+
 add_action( 'admin_footer', function() {
     ?>
     <script type="text/javascript">document.addEventListener('DOMContentLoaded', function() {
