@@ -101,7 +101,7 @@ const NoticeSettingsPanel = () => {
                                 label={ __( 'Set expiry date', 'anm' ) }
                                 checked={ hasExpiryDate }
                                 onChange={ handleExpiryToggle }
-                                __nextHasNoMarginBottom={ ! hasExpiryDate }
+                                __nextHasNoMarginBottom={ true }
                             />
                             { hasExpiryDate && (
                                 <div style={{ marginTop: '12px' }}>
