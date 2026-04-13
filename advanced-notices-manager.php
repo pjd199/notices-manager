@@ -28,17 +28,20 @@ require_once plugin_dir_path(__FILE__) . 'includes/scheduled-cleanup.php';
 require_once plugin_dir_path(__FILE__) . 'includes/download-generator.php';
 require_once plugin_dir_path(__FILE__) . 'includes/post-meta.php';
 
+// add admin pages
 if (is_admin()) {
-    require_once plugin_dir_path(__FILE__) . 'includes/acf-migration.php';
-
+    //require_once plugin_dir_path(__FILE__) . 'includes/acf-migration.php';
     require_once plugin_dir_path(__FILE__) . 'admin/excerpt-word-count.php';
     require_once plugin_dir_path(__FILE__) . 'admin/manager-page.php';
     require_once plugin_dir_path(__FILE__) . 'admin/archive-page.php';
 }
 
-if (class_exists('MailPoet\API\API')) {
-    require_once plugin_dir_path(__FILE__) . 'includes/mailpoet-integration.php';
-}
+// Load MailPoet shortcodes, if MailPoet plugin is installed
+add_action('plugins_loaded', function() {
+    if (class_exists('MailPoet\API\API')) {
+        require_once plugin_dir_path(__FILE__) . 'includes/mailpoet-integration.php';
+    }
+});
 
 // Check for latest updates from GitHub
 $updateChecker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(

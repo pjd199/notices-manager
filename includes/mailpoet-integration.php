@@ -8,11 +8,11 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
     if (strpos($shortcode, '[custom:download_plain_text') !== 0) return $shortcode;
 
     $date_args = '&notice_archive_year=' . date('Y') . '&notice_archive_month=' . date('m') . '&notice_archive_day=' . date('d');
-    return '<p>Also available in text only versions: 
+    return '<div><p>Also available in text only versions: 
                 <a href="' . home_url('/?notice_archive_html=1') . $date_args . '" target="_blank">online</a>, 
                 <a href="' . home_url('/?notice_archive_pdf=1') . $date_args . '" target="_blank">PDF</a>, 
                 <a href="' . home_url('/?notice_archive_docx=1') . $date_args . '" target="_blank">DOCX</a>
-            </p>';
+            </p></div>';
 }, 10, 6);
 
 add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $subscriber, $queue, $newsletter_body, $arguments) {
