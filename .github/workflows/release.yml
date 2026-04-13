@@ -16,13 +16,19 @@ jobs:
   build_release:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
 
-      - name: Checkout Code
-        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6.3.0
+        with:
+          node-version: '24'
+          cache: 'npm'
 
       - name: Get Plugin Version
         id: get_version
@@ -34,6 +40,7 @@ jobs:
       - name: Build plugin
         run: |
           composer install --no-dev --optimize-autoloader
+          npm run build
 
       - name: Prepare Plugin for Zipping
         run: |
@@ -41,7 +48,9 @@ jobs:
           
           # Copy your specific architecture folders
           cp -r admin ${{ env.PLUGIN_SLUG }}/
+          cp -r includes ${{ env.PLUGIN_SLUG }}/
           cp -r vendor ${{ env.PLUGIN_SLUG }}/
+          cp -r build ${{ env.PLUGIN_SLUG }}/
           cp ${{ env.PLUGIN_SLUG }}.php ${{ env.PLUGIN_SLUG }}/
           cp uninstall.php ${{ env.PLUGIN_SLUG }}/
           
