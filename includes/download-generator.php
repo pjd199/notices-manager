@@ -10,8 +10,8 @@ function get_organized_data_from_ids($id_array) {
         return [];
     }
 
-    $categories = ['introduction', 'news', 'events', 'jobs', 'prayer', 'volunteering'];
-    $data = [];
+    $categories = ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'];
+    $data = array_fill_keys($categories, []);
 
     // Run post query
     $all_posts = get_posts([
@@ -31,6 +31,7 @@ function get_organized_data_from_ids($id_array) {
             }
         }
     }
+    $data = array_filter($data, fn($posts) => !empty($posts));
 
     // Sort each group individually, with date sorting for events
     foreach ($data as $cat => &$posts) {
@@ -142,7 +143,7 @@ function get_purifier() {
     $config = \HTMLPurifier_Config::createDefault();
 
     // Only allow the elements you actually need
-    $config->set('HTML.Allowed', 'p,br,strong,b,em,i,ul,ol,li,a[href],sup,sub');
+    $config->set('HTML.Allowed', 'p,br,strong,b,em,i,ul,ol,li,a[href],sup,sub,h1,h2,h3,h4,h5,h6');
 
     // Strip all inline styles and classes
     $config->set('CSS.AllowedProperties', []);
@@ -160,6 +161,13 @@ function get_purifier() {
 
     $purifier = new \HTMLPurifier($config);
     return $purifier;
+}
+
+function headings_to_bold($html) {
+    foreach (['h1','h2','h3','h4','h5','h6'] as $tag) {
+        $html = preg_replace('/<'.$tag.'>(.*?)<\/'.$tag.'>/is', '<strong>$1</strong>', $html);
+    }
+    return $html;
 }
 
 add_action('template_redirect', function() {
@@ -224,8 +232,15 @@ add_action('template_redirect', function() {
                 if ($add_hr) {
                     $html .= '<hr style="border: 0; border-top: 1px solid #333333; margin: 20px 0;">';
                 }
-                $clean_content = $purifier->purify($p->post_content);
+                $clean_content = headings_to_bold($purifier->purify($p->post_content));
                 $html .= '<h2>' . $p->post_title . '</h2>';
+                
+                $event_start_raw = get_post_meta($p->ID, 'event_start_time', true);
+                if ($event_start_raw) {
+                    $date = new \DateTime($event_start_raw);
+                    $html .= '<div><i>'. $date->format('l jS F Y \a\t g:ia') . '</i></div>';
+                }
+
                 $html .= '<div>'.$clean_content . '</div>';
                 $add_hr = true;
             }
@@ -307,7 +322,7 @@ add_action('template_redirect', function() {
                 $section->addTitle($p->post_title, 2);
                 
                 // Add the event date and time, is set
-                $event_start_raw = get_field('event_start', $p->ID);
+                $event_start_raw = get_post_meta($p->ID, 'event_start_time', true);
                 
                 if ($event_start_raw) {
                     $date = new \DateTime($event_start_raw);
@@ -384,8 +399,13 @@ add_action('template_redirect', function() {
                 if ($add_hr) {
                     $html .= '<hr style="border: 0; border-top: 1px solid #333333; margin: 20px 0;">';
                 }
-                $clean_content = $purifier->purify($p->post_content);
+                $clean_content = headings_to_bold($purifier->purify($p->post_content));
                 $html .= '<h3>'.$p->post_title.'</h3>';
+                $event_start_raw = get_post_meta($p->ID, 'event_start_time', true);
+                if ($event_start_raw) {
+                    $date = new \DateTime($event_start_raw);
+                    $html .= '<div><i>'. $date->format('l jS F Y \a\t g:ia') . '</i></div>';
+                }
                 $html .= '<div>'.$clean_content.'</div>';
                 $add_hr = true;
             }
