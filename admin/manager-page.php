@@ -65,6 +65,9 @@ function anm_render_row_content($post_id, $cat_slug, $categories) {
             <span class="move"><a href="#" class="anm-panel-trigger" data-target="move" style="color:#2271b1;">Move</a> | </span>
             <span class="clone"><a href="<?=wp_nonce_url(admin_url("admin-ajax.php?action=anm_clone_post&post_id=$post_id"), 'anm_clone_nonce')?>" onclick="return confirm('Clone to new draft?')">Clone</a> | </span>
             <span class="view"><a href="<?=get_permalink($post_id)?>" target="_blank">View</a> | </span>
+            <?php if ( $status === 'draft' ) : ?>
+                <span class="publish"><a href="#" class="anm-do-publish-post" data-postid="<?=$post_id?>" style="color:#00a32a;">Publish</a> | </span>
+            <?php endif; ?>
             <span class="archive"><a href="#" class="anm-do-remove-notice" data-postid="<?=$post_id?>" data-catslug="<?=$cat_slug?>" style="color:#2271b1;">Archive</a> | </span>
             <span class="trash"><a href="#" class="anm-do-trash-post" data-postid="<?=$post_id?>" style="color:#d63638;">Bin</a></span>
         </div>
@@ -248,6 +251,35 @@ function anm_render_page() {
                 if(!res.success) alert('Save failed');
             });
         });
+
+        $(document).on('click', '.anm-do-publish-post', function(e){
+            e.preventDefault();
+            if(!confirm("Publish this post?")) return;
+            var btn = $(this), pid = btn.data('postid');
+            btn.css('opacity', '0.5');
+            $.post(ajaxurl, { 
+                action: 'anm_publish_post', 
+                post_id: pid, 
+                nonce: '<?=wp_create_nonce("anm_nonce")?>' 
+            }, function(res) { 
+                if(res.success) {
+                    // Refresh the row so the publish button disappears and status updates
+                    $.post(ajaxurl, {
+                        action: 'anm_sync_check',
+                        nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>',
+                        posts: [{ id: pid, cat: $('#post-row-' + pid).data('catslug'), modified: '' }]
+                    }, function(res) {
+                        if(res.success && res.data.updates.length) {
+                            var u = res.data.updates[0];
+                            var $row = $('#post-row-' + u.id);
+                            $row.html(u.html);
+                            var newBg = $row.find('.column-title').data('bg');
+                            $row.css('background-color', newBg ? newBg : '');
+                        }
+                    });
+                }
+            });
+        });
     });
     </script>
     <?php
@@ -343,3 +375,13 @@ add_action('wp_ajax_anm_clone_post', function() {
     exit;
 });
 
+add_action( 'wp_ajax_anm_publish_post', function() {
+    check_ajax_referer( 'anm_nonce', 'nonce' );
+    $post_id = intval( $_POST['post_id'] );
+    if ( current_user_can( 'publish_post', $post_id ) ) {
+        wp_update_post( [ 'ID' => $post_id, 'post_status' => 'publish' ] );
+        anm_purge_notice_caches( $post_id );
+        wp_send_json_success();
+    }
+    wp_send_json_error();
+} );
