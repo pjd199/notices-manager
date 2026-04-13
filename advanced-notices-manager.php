@@ -29,6 +29,8 @@ require_once plugin_dir_path(__FILE__) . 'includes/download-generator.php';
 require_once plugin_dir_path(__FILE__) . 'includes/post-meta.php';
 
 if (is_admin()) {
+    require_once plugin_dir_path(__FILE__) . 'includes/acf-migration.php';
+
     require_once plugin_dir_path(__FILE__) . 'admin/excerpt-word-count.php';
     require_once plugin_dir_path(__FILE__) . 'admin/manager-page.php';
     require_once plugin_dir_path(__FILE__) . 'admin/archive-page.php';
