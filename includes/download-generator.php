@@ -223,8 +223,26 @@ add_action('template_redirect', function() {
         $d = explode('-', $archive->archive_date);
         $date_query = "notice_archive_year={$d[0]}&notice_archive_month={$d[1]}&notice_archive_day={$d[2]}";
 
-        $html = '<html><body style="max-width:800px; margin:auto; font-family:sans-serif;">';
-        $html .= '<div style="background:#eee; padding:10px;"><a href="?notice_archive_docx=1&'.$date_query.'">Save DOCX</a> | <a href="?notice_archive_pdf=1&'.$date_query.'">Save PDF</a></div>';
+        $html = '<!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Notices - ' . esc_html($archive->archive_date) . '</title>
+                    <style>
+                        * { box-sizing: border-box; }
+                        body { max-width: 800px; margin: auto; font-family: sans-serif; padding: 0 16px; font-size: 18px; line-height: 1.6; }
+                        .toolbar { background: #eee; padding: 10px 16px; margin: 0 -16px 24px; display: flex; gap: 16px; flex-wrap: wrap; }
+                        .toolbar a { text-decoration: none; color: #0000EE; }
+                        h1 { font-size: clamp(1.2rem, 5vw, 1.8rem); }
+                        h2 { font-size: clamp(1rem, 4vw, 1.4rem); }
+                        hr { border: 0; border-top: 1px solid #333; margin: 20px 0; }
+                        img { max-width: 100%; height: auto; }
+                        a { word-break: break-word; }
+                    </style>
+                </head>
+                <body>';
+        $html .= '<div style="background:#eee; padding:10px;" class="toolbar"><a href="?notice_archive_docx=1&'.$date_query.'">Save DOCX</a> | <a href="?notice_archive_pdf=1&'.$date_query.'">Save PDF</a></div>';
         foreach ($data as $cat => $posts) {
             $html .= "<h1>".strtoupper($cat)."</h1>";
             $add_hr = false;
