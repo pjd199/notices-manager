@@ -1,2 +1,4 @@
 .wpc
 vendor
+node_modules
+build

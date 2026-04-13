@@ -1,0 +1,24 @@
+{
+  "name": "notices-manager",
+  "version": "0.0.1",
+  "description": "**Advanced Notices Manager** is a productivity-focused WordPress plugin designed for organizations that manage high volumes of time-sensitive notices, such as News, Events, Jobs, and Volunteering.",
+  "main": "index.js",
+  "scripts": {
+    "build": "wp-scripts build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pjd199/notices-manager.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/pjd199/notices-manager/issues"
+  },
+  "homepage": "https://github.com/pjd199/notices-manager#readme",
+  "devDependencies": {
+    "@wordpress/scripts": "^31.8.0"
+  }
+}
