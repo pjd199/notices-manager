@@ -2,6 +2,8 @@
 
 namespace AdvancedNoticesManager;
 
+if (!defined('ABSPATH')) exit;
+
 function get_organized_data_from_ids($id_array) {
     // If the array is empty or not an array, return early.
     if (empty($id_array) || !is_array($id_array)) {

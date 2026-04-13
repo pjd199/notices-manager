@@ -2,6 +2,8 @@
 
 namespace AdvancedNoticesManager;
 
+if (!defined('ABSPATH')) exit;
+
 /**
  * Custom helper to purge LiteSpeed cache for specific notice-related pages.
  */

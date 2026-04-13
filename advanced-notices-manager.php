@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.39
+ * Version: 1.0.40
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
@@ -23,14 +23,19 @@ if (file_exists(plugin_dir_path(__FILE__) . 'vendor/autoload.php')) {
 }
 
 // include Sub-modules
-require_once plugin_dir_path(__FILE__) . 'admin/excerpt-word-count.php';
-require_once plugin_dir_path(__FILE__) . 'admin/purge-cache.php';
-require_once plugin_dir_path(__FILE__) . 'admin/scheduled-cleanup.php';
-require_once plugin_dir_path(__FILE__) . 'admin/download-generator.php';
+require_once plugin_dir_path(__FILE__) . 'includes/purge-cache.php';
+require_once plugin_dir_path(__FILE__) . 'includes/scheduled-cleanup.php';
+require_once plugin_dir_path(__FILE__) . 'includes/download-generator.php';
+require_once plugin_dir_path(__FILE__) . 'includes/post-meta.php';
 
-if ( is_admin() ) {
+if (is_admin()) {
+    require_once plugin_dir_path(__FILE__) . 'admin/excerpt-word-count.php';
     require_once plugin_dir_path(__FILE__) . 'admin/manager-page.php';
     require_once plugin_dir_path(__FILE__) . 'admin/archive-page.php';
+}
+
+if (class_exists('MailPoet\API\API')) {
+    require_once plugin_dir_path(__FILE__) . 'includes/mailpoet-integration.php';
 }
 
 // Check for latest updates from GitHub

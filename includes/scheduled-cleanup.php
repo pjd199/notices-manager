@@ -2,6 +2,8 @@
 
 namespace AdvancedNoticesManager;
 
+if (!defined('ABSPATH')) exit;
+
 /**
  * Scheduled Task: Remove tags from expired events daily at 12:01
  */
