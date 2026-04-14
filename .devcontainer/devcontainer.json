@@ -1,10 +1,13 @@
 {
   "name": "Notices Manager",
-  "postCreateCommand": "sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/0.0.5/wpc.sh && sudo chmod +x /usr/local/bin/wpc",
-  "postStartCommand": "wpc start",
+  "postCreateCommand": {
+    "wpc": "sudo curl -L -o /usr/local/bin/wpc https://raw.githubusercontent.com/pjd199/wordpress-codespace/refs/tags/0.0.7/wpc.sh && sudo chmod +x /usr/local/bin/wpc",
+    "composer": "composer install --ignore-platform-req=ext-gd --ignore-platform-req=ext-zip",
+    "node": "npm install"
+  },
   "forwardPorts": [80],
   "portsAttributes": {
-    "80": { 
+    "80": {
         "label": "WordPress", 
         "onAutoForward": "openBrowserOnce" }
   }
