@@ -1,0 +1,47 @@
+{
+    "name": "advanced-notices-manager/event-date-block",
+    "title": "ANM Event Date",
+    "category": "text",
+    "description": "Displays the event start date with formatting options.",
+    "apiVersion": 3,
+    "supports": {
+        "color": {
+            "text": true,
+            "background": true
+        },
+        "typography": {
+            "fontSize": true,
+            "lineHeight": true,
+            "fontFamily": true,
+            "fontWeight": true,
+            "fontStyle": true,
+            "textTransform": true,
+            "letterSpacing": true
+        },
+        "spacing": {
+            "margin": true,
+            "padding": true
+        },
+        "anchor": true
+    },
+    "attributes": {
+        "dateFormat": {
+            "type": "string",
+            "default": "l jS F Y"
+        },
+        "customDateFormat": {
+            "type": "string",
+            "default": ""
+        },
+        "timeFormat": {
+            "type": "string",
+            "default": "g:i a"
+        },
+        "customTimeFormat": {
+            "type": "string",
+            "default": ""
+        }
+    },
+    "usesContext": ["postId"],
+    "textdomain": "advanced-notices-manager"
+}
