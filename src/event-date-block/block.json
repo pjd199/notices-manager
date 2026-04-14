@@ -5,6 +5,7 @@
     "description": "Displays the event start date with formatting options.",
     "apiVersion": 3,
     "supports": {
+        "textAlign": true,
         "color": {
             "text": true,
             "background": true
@@ -40,6 +41,19 @@
         "customTimeFormat": {
             "type": "string",
             "default": ""
+        },
+        "hideZeroMinutes": {
+            "type": "boolean",
+            "default": false
+        },
+        "fontWeight": {
+            "type": "string"
+        },
+        "fontStyle": {
+            "type": "string"
+        },
+        "textAlign": {
+            "type": "string"
         }
     },
     "usesContext": ["postId"],

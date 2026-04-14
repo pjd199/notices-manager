@@ -20,5 +20,8 @@
   "homepage": "https://github.com/pjd199/notices-manager#readme",
   "devDependencies": {
     "@wordpress/scripts": "^31.8.0"
+  },
+  "dependencies": {
+    "@wordpress/icons": "^12.1.0"
   }
 }
