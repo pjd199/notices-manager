@@ -64,7 +64,6 @@ function parse_node_to_word($node, &$section) {
         $text = $node->nodeValue; // Use nodeValue for text nodes
         if (strlen(trim($text)) > 0) {
             $section->addText($text);
-            error_log("ANM Debug - Found Text: " . substr($text, 0, 20));
         }
         return;
     }
