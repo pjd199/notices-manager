@@ -26,21 +26,13 @@
         "anchor": true
     },
     "attributes": {
-        "dateFormat": {
+        "format": {
             "type": "string",
-            "default": "l jS F Y"
+            "default": "l jS F Y, g:i a"
         },
-        "customDateFormat": {
-            "type": "string",
-            "default": ""
-        },
-        "timeFormat": {
-            "type": "string",
-            "default": "g:i a"
-        },
-        "customTimeFormat": {
-            "type": "string",
-            "default": ""
+        "isCustomMode": {
+            "type": "boolean",
+            "default": false
         },
         "hideZeroMinutes": {
             "type": "boolean",

@@ -5,26 +5,38 @@ import { __ } from '@wordpress/i18n';
 import { dateI18n } from '@wordpress/date';
 import { formatBold, formatItalic } from '@wordpress/icons';
 
-const DATE_FORMATS = [
-    { label: 'l jS F Y (Tuesday 31st January 2026)', value: 'l jS F Y' },
-    { label: 'j F Y (31 January 2026)', value: 'j F Y' },
-    { label: 'd/m/Y (31/01/2026)', value: 'd/m/Y' },
-    { label: 'd-m-Y (31-01-2026)', value: 'd-m-Y' },
-    { label: 'm/d/Y (01/31/2026)', value: 'm/d/Y' },
-    { label: 'm-d-Y (01/31/2026)', value: 'm-d-Y' },
-    { label: 'Custom', value: 'custom' },
+const SUGGESTED_FORMATS = [
+    // Full Descriptive
+    { label: 'Tuesday 31st January, 7:15 pm', value: 'l jS F Y, g:i a' },
+    
+    // Standard Formal
+    { label: 'January 31, 2026', value: 'F j, Y' },
+    
+    // Clean / Minimalist (Great for cards)
+    { label: '31 Jan 2026', value: 'j M Y' },
+    
+    // No Year (Great for recurring annual events)
+    { label: 'Tuesday 31st Jan, 7:15 pm', value: 'l jS M, g:i a' },
+    
+    // Numeric - UK/International
+    { label: '31/01/2026 7:15pm', value: 'd/m/Y g:i a' },
+    { label: '31/01/2026 19:15', value: 'd/m/Y H:i' },
+    
+    // Numeric - US Style
+    { label: '01/31/2026', value: 'm/d/Y' },
+    
+    // Just Time (If they want to pair two blocks)
+    { label: '7:15 pm', value: 'g:i a' },
+    
+    // ISO Style (Technical/Data)
+    { label: '2026-01-31', value: 'Y-m-d' },
+    
+    { label: 'Custom...', value: 'custom' },
 ];
 
-const TIME_FORMATS = [
-    { label: 'None', value: 'none' },
-    { label: 'g:i a (7:15 pm)', value: 'g:i a' },
-    { label: 'g:i A (7:15 PM)', value: 'g:i A' },
-    { label: 'H:i (19:15)', value: 'H:i' },
-    { label: 'Custom', value: 'custom' },
-];
 
 export default function Edit({ attributes, setAttributes, context }) {
-    const { dateFormat, customDateFormat, timeFormat, customTimeFormat, hideZeroMinutes } = attributes;
+    const { format, isCustomMode, hideZeroMinutes } = attributes;
 
     const postId = context['postId'];
 
@@ -35,6 +47,8 @@ export default function Edit({ attributes, setAttributes, context }) {
         const post = select('core').getEntityRecord('postType', 'post', postId);
         return post?.meta?.event_start_time ?? null;
     }, [postId]);
+
+    const selectValue = isCustomMode ? 'custom' : format;
 
     const blockProps = useBlockProps({
         style: {
@@ -52,56 +66,30 @@ export default function Edit({ attributes, setAttributes, context }) {
         setAttributes({ fontStyle: fontStyle === 'italic' ? 'normal' : 'italic' });
     };
 
-    const activeDate = dateFormat === 'custom' ? customDateFormat : dateFormat;
-    let activeTime = '';
-    if (timeFormat === 'custom') {
-        activeTime = customTimeFormat;
-    } else if (timeFormat !== 'none') {
-        activeTime = timeFormat;
+    let displayString = '';
+    let isFormatValid = true;
+    if (!eventDate) {
+        displayString = __('No event date set', 'anm');
+    } else {
+        try {
+            // Attempt to format. If format is empty or gibberish, 
+            // dateI18n might return the raw timestamp or a broken string.
+            displayString = dateI18n(format || ' ', eventDate);
+            
+            // Basic sanity check: if the result is identical to the format string, 
+            // it usually means no valid placeholders were found.
+            if (format && displayString === format && !/[a-zA-Z]/.test(format)) {
+                isFormatValid = false;
+            }
+        } catch (error) {
+            isFormatValid = false;
+            displayString = __('Invalid format', 'anm');
+        }
     }
-
-    let displayString = eventDate 
-        ? dateI18n(activeTime ? `${activeDate}, ${activeTime}` : activeDate, eventDate) 
-     : __('No event date set', 'anm');
 
     if (eventDate && hideZeroMinutes) {
-        // This regex looks for :00 followed by optional space and AM/PM
         displayString = displayString.replace(/:00(\s?(am|pm|AM|PM))?/i, '$1').trim();
     }
-
-    const handleDateChange = (val) => {
-    const newAttrs = { dateFormat: val };
-
-    if (val === 'custom') {
-            // When switching TO custom, seed it with the current preset value
-            // if the custom field is currently empty.
-            if (!customDateFormat) {
-                newAttrs.customDateFormat = dateFormat;
-            }
-        } else {
-            // If they chose a preset, sync it to the custom field 
-            // so the 'Custom' input is ready if they switch back later.
-            newAttrs.customDateFormat = val;
-        }
-
-        setAttributes(newAttrs);
-    };
-
-    const handleTimeChange = (val) => {
-        const newAttrs = { timeFormat: val };
-
-        if (val === 'custom') {
-            if (!customTimeFormat) {
-                // Seed with current preset, but if current is 'none', 
-                // give them a sensible default like 'g:i a'
-                newAttrs.customTimeFormat = timeFormat === 'none' ? 'g:i a' : timeFormat;
-            }
-        } else if (val !== 'none') {
-            newAttrs.customTimeFormat = val;
-        }
-
-        setAttributes(newAttrs);
-    };
 
     return (
         <>
@@ -125,46 +113,42 @@ export default function Edit({ attributes, setAttributes, context }) {
                     />
                 </ToolbarGroup>
             </BlockControls>
+
             <InspectorControls>
                 <PanelBody title={__('Date & Time Format')}>
-
                     <SelectControl
-                        label={__('Date Format')}
-                        value={dateFormat}
-                        options={DATE_FORMATS}
-                        onChange={handleDateChange}
+                        label={__('Format')}
+                        value={selectValue}
+                        options={SUGGESTED_FORMATS}
+                        onChange={(val) => {
+                            if (val === 'custom') {
+                                // Switch to custom mode but keep current format string
+                                setAttributes({ isCustomMode: true });
+                            } else {
+                                // Switch to preset mode and update the format
+                                setAttributes({ 
+                                    format: val, 
+                                    isCustomMode: false 
+                                });
+                            }
+                        }}
                         __nextHasNoMarginBottom={ true }
                         __next40pxDefaultSize={ true }
                     />
-                    {dateFormat === 'custom' && (
+                    {(selectValue === 'custom') && (
                         <TextControl
-                            label={__('Custom Date Format')}
-                            value={customDateFormat}
-                            onChange={(val) => setAttributes({ customDateFormat: val })}
-                            help={__('Use PHP date format strings, e.g. d/m/Y')}
+                            label={__('Custom Format')}
+                            value={format}
+                            onChange={(val) => setAttributes({ format: val })}
+                            help={!isFormatValid ? 
+                                <span style={{ color: 'red' }}>{__('Warning: This format may not render correctly.')}</span> : 
+                                __('Use PHP date tags (e.g., Y-m-d H:i)')
+                                }
                             __nextHasNoMarginBottom={ true }
                             __next40pxDefaultSize={ true }
                         />
                     )}
 
-                    <SelectControl
-                        label={__('Time Format')}
-                        value={timeFormat}
-                        options={TIME_FORMATS}
-                        onChange={handleTimeChange}
-                        __nextHasNoMarginBottom={ true }
-                        __next40pxDefaultSize={ true }
-                    />
-                    {timeFormat === 'custom' && (
-                        <TextControl
-                            label={__('Custom Time Format')}
-                            value={customTimeFormat}
-                            onChange={(val) => setAttributes({ customTimeFormat: val })}
-                            help={__('Use PHP date format strings, e.g. H:i')}
-                            __nextHasNoMarginBottom={ true }
-                            __next40pxDefaultSize={ true }
-                        />
-                    )}
                     <ToggleControl
                         label={__('Hide :00 on full hours')}
                         help={hideZeroMinutes ? __('e.g., 7pm') : __('e.g., 7:00pm')}
