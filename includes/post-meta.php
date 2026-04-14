@@ -28,14 +28,3 @@ add_action('save_post', function($post_id) {
         delete_post_meta($post_id, 'footnotes');
     }
 }, 20);
-
-
-add_action('enqueue_block_editor_assets', function() {
-    $asset_file = include(plugin_dir_path(ANM_MAIN_FILE) . 'build/index.asset.php');
-    wp_enqueue_script(
-        'anm-editor-js',
-        plugin_dir_url(ANM_MAIN_FILE) . 'build/index.js',
-        $asset_file['dependencies'],
-        $asset_file['version']
-    );
-});

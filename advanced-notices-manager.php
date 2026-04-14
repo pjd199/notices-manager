@@ -18,23 +18,34 @@ global $wpdb;
 define('ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE', $wpdb->prefix . 'advanced_notices_manager_archive');
 
 // Load Composer Autoloader (GitHub Actions will build this)
-if (file_exists(plugin_dir_path(__FILE__) . 'vendor/autoload.php')) {
-    require_once plugin_dir_path(__FILE__) . 'vendor/autoload.php';
+if (file_exists(plugin_dir_path(ANM_MAIN_FILE) . 'vendor/autoload.php')) {
+    require_once plugin_dir_path(ANM_MAIN_FILE) . 'vendor/autoload.php';
 }
 
 // include Sub-modules
-require_once plugin_dir_path(__FILE__) . 'includes/purge-cache.php';
-require_once plugin_dir_path(__FILE__) . 'includes/scheduled-cleanup.php';
-require_once plugin_dir_path(__FILE__) . 'includes/download-generator.php';
-require_once plugin_dir_path(__FILE__) . 'includes/post-meta.php';
+require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/purge-cache.php';
+require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/scheduled-cleanup.php';
+require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/download-generator.php';
+require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/post-meta.php';
+require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/event-date-block.php';
 
 // add admin pages
 if (is_admin()) {
-    //require_once plugin_dir_path(__FILE__) . 'includes/acf-migration.php';
-    require_once plugin_dir_path(__FILE__) . 'admin/excerpt-word-count.php';
-    require_once plugin_dir_path(__FILE__) . 'admin/manager-page.php';
-    require_once plugin_dir_path(__FILE__) . 'admin/archive-page.php';
+    //require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/acf-migration.php';
+    require_once plugin_dir_path(ANM_MAIN_FILE) . 'admin/excerpt-word-count.php';
+    require_once plugin_dir_path(ANM_MAIN_FILE) . 'admin/manager-page.php';
+    require_once plugin_dir_path(ANM_MAIN_FILE) . 'admin/archive-page.php';
 }
+
+add_action('enqueue_block_editor_assets', function() {
+    $asset_file = include(plugin_dir_path(ANM_MAIN_FILE) . 'build/index.asset.php');
+    wp_enqueue_script(
+        'anm-editor-js',
+        plugin_dir_url(ANM_MAIN_FILE) . 'build/index.js',
+        $asset_file['dependencies'],
+        $asset_file['version']
+    );
+});
 
 // Load MailPoet shortcodes, if MailPoet plugin is installed
 add_action('plugins_loaded', function() {
