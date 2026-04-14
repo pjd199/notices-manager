@@ -37,9 +37,12 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build plugin
+      - name: Build PHP
         run: |
           composer install --no-dev --optimize-autoloader
+
+      - name: Build Node
+        run: |
           npm ci
           npm run build
 
