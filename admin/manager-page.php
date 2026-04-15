@@ -110,6 +110,9 @@ function anm_render_page() {
             <a href="<?=home_url('/notices')?>" class="button" target="_blank">View Notices</a>
             <a href="<?=home_url('/news')?>" class="button" target="_blank">View News</a>
             <a href="<?=home_url('/events')?>" class="button" target="_blank">View Events</a>
+            <a href="<?=home_url('/?notice_archive_html=1')?>" class="button" target="_blank">View Plain Text</a>
+            <a href="<?=home_url('/?notice_archive_pdf=1')?>" class="button" target="_blank">Download PDF</a>
+            <a href="<?=home_url('/?notice_archive_docx=1')?>" class="button" target="_blank">Download DOCX</a>
         </div>
         <hr class="wp-header-end">
     
