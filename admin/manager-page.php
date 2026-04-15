@@ -39,11 +39,29 @@ function anm_render_row_content($post_id, $cat_slug, $categories) {
     // Excerpt Word Count Check
     if (has_excerpt($post_id)) {
         $word_count = str_word_count(strip_tags(get_the_excerpt($post_id)));
-        $excerpt_flag = ($word_count >= 15 && $word_count <= 35) ? '<span style="color:green;" title="'.$word_count.' words">✔</span>' : '<span style="color:orange;" title="'.$word_count.' words">⚠</span>';
-    } else {
-        $excerpt_flag = '<span style="color:red;" title="Excerpt required">✘</span>';
-    }
+        
+        if ($word_count >= 15 && $word_count <= 35) {
+            $status_color = 'green';
+            $icon = '✔';
+            $message = "Ideal length: {$word_count} words.";
+        } else {
+            $status_color = 'orange';
+            $icon = '⚠';
+            $diff = ($word_count < 15) ? 'Too short' : 'Too long';
+            $message = "{$diff} ({$word_count} words). Aim for 15-35 words.";
+        }
+        
+        $excerpt_flag = sprintf(
+            '<span style="color:%s; cursor:help;" title="%s">%s</span>',
+            $status_color,
+            esc_attr($message),
+            $icon
+        );
 
+    } else {
+        $excerpt_flag = '<span style="color:red; cursor:help;" title="No excerpt found. Please add one for SEO.">✘</span>';
+    }
+    
     $status_label = ($status !== 'publish') ? ' — ' . ucfirst($status) : '';
     $is_new = floor(($today - $pub_date) / DAY_IN_SECONDS) < 5;
     $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > (18 * DAY_IN_SECONDS))) || ($date_ts && $date_ts < $today);
