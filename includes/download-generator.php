@@ -172,8 +172,6 @@ function headings_to_bold($html) {
 add_action('template_redirect', function() {
     global $wpdb;
     
-    // --- START LOGIC CHANGE: ID to DATE ---
-    
     // Check which format is requested
     $docx_req = isset($_GET['notice_archive_docx']);
     $pdf_req  = isset($_GET['notice_archive_pdf']);
@@ -198,20 +196,31 @@ add_action('template_redirect', function() {
             $target_date
         ));
     }
-
-    // Fallback: If date lookup fails or wasn't provided, get the latest entry
     if (!$archive) {
-        $archive = $wpdb->get_row("SELECT * FROM " . ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE . " ORDER BY archive_date DESC LIMIT 1");
+        list($year, $month, $day) = explode('-', date('Y-m-d'));
+
+        // Fallback: If date lookup fails or wasn't provided, get the current state of play
+        $base_cats = ['introduction', 'news', 'events', 'jobs', 'prayer', 'volunteering'];
+        $suffixes  = ['-full', '-short', '-list', '-website'];
+        $all_ids   = [];
+
+        foreach ($base_cats as $cat) {
+            $tags = array_map(fn($s) => $cat . $s, $suffixes);
+            $p_ids = get_posts([
+                'category_name' => $cat,
+                'tax_query'     => [['taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $tags]],
+                'fields'        => 'ids', 
+                'posts_per_page' => -1
+            ]);
+            $all_ids = array_merge($all_ids, $p_ids);
+        }
+        
+        $unique_ids = array_unique($all_ids);
+        sort($unique_ids); 
+        $post_ids_string = implode(',', $unique_ids);
     }
 
-    if (!$archive) wp_die('Archive not found.');
-
-    // Map the archive ID for use in HTML view links
-    $id = $archive->id;
-    
-    // --- END LOGIC CHANGE ---
-
-    $data = get_organized_data_from_ids(explode(',', $archive->post_ids));
+    $data = get_organized_data_from_ids(explode(',', $archive ? $archive->post_ids : $post_ids_string));
 
     $purifier = get_purifier();
     
@@ -219,15 +228,14 @@ add_action('template_redirect', function() {
     if ($html_req) {
         
         // Update save links to use date-based parameters for consistency
-        $d = explode('-', $archive->archive_date);
-        $date_query = "notice_archive_year={$d[0]}&notice_archive_month={$d[1]}&notice_archive_day={$d[2]}";
+        $date_query = "&notice_archive_year={$year}&notice_archive_month={$month}&notice_archive_day={$day}";
 
         $html = '<!DOCTYPE html>
                 <html>
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Notices - ' . esc_html($archive->archive_date) . '</title>
+                    <title>Notices - ' . $day . '/' . $month . '/' . $year . '</title>
                     <style>
                         * { box-sizing: border-box; }
                         body { max-width: 800px; margin: auto; font-family: sans-serif; padding: 0 16px; font-size: 18px; line-height: 1.6; }
@@ -241,7 +249,7 @@ add_action('template_redirect', function() {
                     </style>
                 </head>
                 <body>';
-        $html .= '<div style="background:#eee; padding:10px;" class="toolbar"><a href="?notice_archive_docx=1&'.$date_query.'">Save DOCX</a> | <a href="?notice_archive_pdf=1&'.$date_query.'">Save PDF</a></div>';
+        $html .= '<div style="background:#eee; padding:10px;" class="toolbar"><a href="?notice_archive_docx=1'.$date_query.'">Save DOCX</a> | <a href="?notice_archive_pdf=1'.$date_query.'">Save PDF</a></div>';
         foreach ($data as $cat => $posts) {
             $html .= "<h1>".strtoupper($cat)."</h1>";
             $add_hr = false;
@@ -278,7 +286,7 @@ add_action('template_redirect', function() {
  
         // Set some basic metadata to help Word validate the file
         $phpWord->getDocInfo()->setCreator('Wordpress');
-        $phpWord->getDocInfo()->setTitle("Notices - " . $archive->archive_date);
+        $phpWord->getDocInfo()->setTitle('Notices-' . $day . '-' . $month . '-' . $year);
 
         // Add styles
         $headingStyle = array('name' => 'Verdana', 'size' => 20, 'bold' => true, 'color' => '333333');
@@ -378,7 +386,7 @@ add_action('template_redirect', function() {
     
         header('Content-Description: File Transfer');
         header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        header('Content-Disposition: attachment; filename="Notices-' . $archive->archive_date . '.docx"');
+        header('Content-Disposition: attachment; filename="Notices-' . $year . '-' . $month . '-' . $day . '.docx"');
         header('Content-Transfer-Encoding: binary');
         header('Expires: 0');
         header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
@@ -431,7 +439,7 @@ add_action('template_redirect', function() {
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
-        $dompdf->stream("Notices-{$archive->archive_date}.pdf");
+        $dompdf->stream('Notices-' . $year . '-' . $month . '-' . $day . '.pdf');
         exit;
     }
 });
