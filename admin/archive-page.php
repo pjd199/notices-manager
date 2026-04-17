@@ -11,7 +11,7 @@ add_action('admin_menu', function() {
 /**
  * 1. SCHEDULE CRON ON ACTIVATION
  */
-register_activation_hook(__FILE__, function() {
+register_activation_hook(ANM_MAIN_FILE, function() {
     if (!wp_next_scheduled('advanced_notices_daily_archive')) {
         $timestamp = strtotime('23:00:00');
         if ($timestamp < time()) {
@@ -21,7 +21,7 @@ register_activation_hook(__FILE__, function() {
     }
 });
 
-register_deactivation_hook(__FILE__, function() {
+register_deactivation_hook(ANM_MAIN_FILE, function() {
     wp_clear_scheduled_hook('advanced_notices_daily_archive');
 });
 

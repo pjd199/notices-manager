@@ -31,10 +31,27 @@ require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/event-date-block.php';
 
 // add admin pages
 if (is_admin()) {
-    //require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/acf-migration.php';
-    require_once plugin_dir_path(ANM_MAIN_FILE) . 'admin/excerpt-word-count.php';
+    require_once plugin_dir_path(ANM_MAIN_FILE) . 'admin/settings-page.php';
     require_once plugin_dir_path(ANM_MAIN_FILE) . 'admin/manager-page.php';
     require_once plugin_dir_path(ANM_MAIN_FILE) . 'admin/archive-page.php';
+    //require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/acf-migration.php';
+}
+
+/**
+ * Retrieve default settings, with fallbacks
+ */
+function anm_get_settings() {
+    $defaults = [
+        'excerpt_min' => 15,
+        'excerpt_max' => 35,
+        'categories'  => ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'],
+        'tags'        => ['full' => 'Full post', 'short' => 'Excerpt', 'list' => 'Title', 'website' => 'Website only'],
+        'img_w'       => 16,
+        'img_h'       => 9,
+        'new_days'    => 5,  
+        'stale_days'  => 18  
+    ];
+    return wp_parse_args(get_option('anm_settings', []), $defaults);
 }
 
 add_action('enqueue_block_editor_assets', function() {
@@ -43,21 +60,35 @@ add_action('enqueue_block_editor_assets', function() {
         'anm-editor-js',
         plugin_dir_url(ANM_MAIN_FILE) . 'build/index.js',
         $asset_file['dependencies'],
-        $asset_file['version']
+        $asset_file['version'],
+        true
+    );
+
+    $settings = anm_get_settings();
+
+    $encoded = json_encode([
+        'excerptMin' => (int) $settings['excerpt_min'],
+        'excerptMax' => (int) $settings['excerpt_max'],
+    ]);
+    
+    wp_add_inline_script(
+        'anm-editor-js', 
+        'window.ANM_SETTINGS = ' . $encoded . ';', 
+        'before'
     );
 });
 
 // Load MailPoet shortcodes, if MailPoet plugin is installed
 add_action('plugins_loaded', function() {
     if (class_exists('MailPoet\API\API')) {
-        require_once plugin_dir_path(__FILE__) . 'includes/mailpoet-integration.php';
+        require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/mailpoet-integration.php';
     }
 });
 
 // Check for latest updates from GitHub
 $updateChecker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
 	'https://github.com/pjd199/notices-manager/',
-	__FILE__,
+	ANM_MAIN_FILE,
 	'advanced-notices-manager'
 );
 $updateChecker->setBranch('main');
@@ -68,11 +99,7 @@ add_action('admin_menu', function () {
     add_submenu_page('edit.php', 'Notices Manager', 'Notices Manager', 'manage_options', 'notices-manager', __NAMESPACE__ .'\anm_render_page');
 });
 
-// Register cleanup tasks
-register_activation_hook(__FILE__, __NAMESPACE__.'\register_expired_cleanup_task');
-register_deactivation_hook(__FILE__, __NAMESPACE__.'\deregister_expired_cleanup_task');
-
-register_activation_hook(__FILE__, function() {
+register_activation_hook(ANM_MAIN_FILE, function() {
     global $wpdb;
     $charset_collate = $wpdb->get_charset_collate();
 

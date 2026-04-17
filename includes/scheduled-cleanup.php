@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) exit;
 /**
  * Scheduled Task: Remove tags from expired events daily at 12:01
  */
- function register_expired_cleanup_task() {
+register_activation_hook(ANM_MAIN_FILE, function() {
     if (!wp_next_scheduled('anm_expired_cleanup')) {
         // Calculate next 00:01 in site's local time
         $timezone = wp_timezone();
@@ -17,11 +17,11 @@ if (!defined('ABSPATH')) exit;
         }
         wp_schedule_event($next_run->getTimestamp(), 'daily', 'anm_expired_cleanup');
     }
-}
+});
 
-function deregister_expired_cleanup_task() {
+register_deactivation_hook(ANM_MAIN_FILE, function() {
     wp_clear_scheduled_hook('anm_expired_cleanup');
-}
+});
 
 // The actual cleanup task
 add_action('anm_expired_cleanup', function () {

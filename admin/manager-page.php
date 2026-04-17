@@ -9,6 +9,7 @@ if (!defined('ABSPATH')) exit;
  * Isolated so it can be called by the initial loop AND the AJAX refresh.
  */
 function anm_render_row_content($post_id, $cat_slug, $categories) {
+    $settings = anm_get_settings();
     $post = get_post($post_id);
     if (!$post) return '';
 
@@ -31,7 +32,7 @@ function anm_render_row_content($post_id, $cat_slug, $categories) {
     if (has_post_thumbnail($post_id)) {
         $img_data = wp_get_attachment_image_src(get_post_thumbnail_id($post_id), 'full');
         $ratio = ($img_data && $img_data[2] > 0) ? ($img_data[1] / $img_data[2]) : 0;
-        $img_flag = (abs($ratio - (16/9)) < 0.02) ? '<span style="color:green;">✔</span>' : '<span style="color:orange;" title="Ratio: '.round($ratio, 2).':1">⚠</span>';
+        $img_flag = (abs($ratio - ($sanitized['img_w']/$sanitized['img_h'])) < 0.02) ? '<span style="color:green;">✔</span>' : '<span style="color:orange;" title="Ratio: '.round($ratio, 2).':1">⚠</span>';
     } else {
         $img_flag = '<span style="color:red;">✘</span>';
     }
@@ -40,15 +41,15 @@ function anm_render_row_content($post_id, $cat_slug, $categories) {
     if (has_excerpt($post_id)) {
         $word_count = str_word_count(strip_tags(get_the_excerpt($post_id)));
         
-        if ($word_count >= 15 && $word_count <= 35) {
+        if ($word_count >= $settings['excerpt_min'] && $word_count <= $settings['excerpt_max']) {
             $status_color = 'green';
             $icon = '✔';
             $message = "Ideal length: {$word_count} words.";
         } else {
             $status_color = 'orange';
             $icon = '⚠';
-            $diff = ($word_count < 15) ? 'Too short' : 'Too long';
-            $message = "{$diff} ({$word_count} words). Aim for 15-35 words.";
+            $diff = ($word_count < $settings['excerpt_min']) ? 'Too short' : 'Too long';
+            $message = "{$diff} ({$word_count} words). Aim for {$settings['excerpt_min']}-{$settings['excerpt_max']} words.";
         }
         
         $excerpt_flag = sprintf(
@@ -59,12 +60,12 @@ function anm_render_row_content($post_id, $cat_slug, $categories) {
         );
 
     } else {
-        $excerpt_flag = '<span style="color:red; cursor:help;" title="No excerpt found. Please add one for SEO.">✘</span>';
+        $excerpt_flag = '<span style="color:red; cursor:help;" title="No excerpt found.">✘</span>';
     }
     
     $status_label = ($status !== 'publish') ? ' — ' . ucfirst($status) : '';
-    $is_new = floor(($today - $pub_date) / DAY_IN_SECONDS) < 5;
-    $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > (18 * DAY_IN_SECONDS))) || ($date_ts && $date_ts < $today);
+    $is_new = floor(($today - $pub_date) / DAY_IN_SECONDS) < $settings['new_days'];
+    $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > ($settings['stale_days'] * DAY_IN_SECONDS))) || ($date_ts && $date_ts < $today);
 
     $row_bg = '';
     if ($is_new) $row_bg = '#c5ff99';
