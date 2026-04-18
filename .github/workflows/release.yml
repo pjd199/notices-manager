@@ -41,7 +41,7 @@ jobs:
         run: |
           composer install --no-dev --optimize-autoloader
 
-      - name: Build Node
+      - name: Build Javascript
         run: |
           npm ci
           npm run build
