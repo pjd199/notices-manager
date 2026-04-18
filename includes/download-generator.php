@@ -10,13 +10,13 @@ function get_organized_data_from_ids($id_array) {
         return [];
     }
 
-    $categories = ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'];
-    $data = array_fill_keys($categories, []);
+    $settings = anm_get_settings();
+    $data = array_fill_keys($settings['categories'], []);
 
     // Run post query
     $all_posts = get_posts([
         'post__in'       => $id_array,
-        'category_name'  => implode(',', $categories),
+        'category_name'  => implode(',', $settings['categories']),
         'posts_per_page' => -1,
         'post_status'    => 'publish',
     ]);
@@ -24,7 +24,7 @@ function get_organized_data_from_ids($id_array) {
 
     // Group posts by category
     foreach ($all_posts as $post) {
-        foreach ($categories as $cat) {
+        foreach ($settings['categories'] as $cat) {
             if (has_category($cat, $post)) {
                 $data[$cat][] = $post;
                 break; 
@@ -200,12 +200,11 @@ add_action('template_redirect', function() {
         list($year, $month, $day) = explode('-', date('Y-m-d'));
 
         // Fallback: If date lookup fails or wasn't provided, get the current state of play
-        $base_cats = ['introduction', 'news', 'events', 'jobs', 'prayer', 'volunteering'];
-        $suffixes  = ['-full', '-short', '-list', '-website'];
+        $settings = anm_get_settings();
         $all_ids   = [];
 
-        foreach ($base_cats as $cat) {
-            $tags = array_map(fn($s) => $cat . $s, $suffixes);
+        foreach ($settings['categories'] as $cat) {
+            $tags = array_map(fn($s) => $cat . $s, $settings['suffixes']);
             $p_ids = get_posts([
                 'category_name' => $cat,
                 'tax_query'     => [['taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $tags]],

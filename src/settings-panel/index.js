@@ -15,9 +15,6 @@ import { useSelect, useDispatch } from '@wordpress/data';
 import { useEntityProp } from '@wordpress/core-data';
 import { useEffect, useState } from '@wordpress/element';
 
-const TARGET_CATEGORIES = ['introduction', 'news', 'events', 'jobs', 'volunteering', 'prayer'];
-const TAG_SUFFIXES = ['-full', '-short', '-list', '-website'];
-
 const NoticeSettingsPanel = () => {
     /**
      * 1. Data Fetching & State
@@ -49,7 +46,7 @@ const NoticeSettingsPanel = () => {
     };
 
     const isEvent = checkIsCategory(['events', 'event']);
-    const isTargetCategory = checkIsCategory(TARGET_CATEGORIES);
+    const isTargetCategory = checkIsCategory(window.ANM_SETTINGS.targetCategories);
     const isMissingEventDate = isEvent && !meta?.event_start_time;
 
     /**
@@ -94,7 +91,7 @@ const NoticeSettingsPanel = () => {
         const remainingTagIds = selectedTagIds.filter(tagId => {
             const tagObject = allTags.find(t => t.id === tagId);
             if (!tagObject) return true;
-            return !TAG_SUFFIXES.some(suffix => tagObject.slug.endsWith(suffix));
+            return !window.ANM_SETTINGS.tagSuffixes.some(suffix => tagObject.slug.endsWith(suffix));
         });
 
         const updates = {};
@@ -215,7 +212,7 @@ const NoticeSettingsPanel = () => {
 
                             {/* Links as single words on the next line */}
                             <Flex gap={3} wrap={true} justify="start">
-                                {TARGET_CATEGORIES.map((name) => (
+                                {window.ANM_SETTINGS.targetCategories.map((name) => (
                                     <FlexItem key={name}>
                                         <Button 
                                             variant="link" 

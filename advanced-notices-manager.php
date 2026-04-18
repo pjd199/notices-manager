@@ -17,6 +17,30 @@ define('ANM_MAIN_FILE', __FILE__);
 global $wpdb;
 define('ADVANCED_NOTICES_MANAGER_ARCHIVE_TABLE', $wpdb->prefix . 'advanced_notices_manager_archive');
 
+/**
+ * Retrieve default settings, with fallbacks
+ */
+function anm_get_settings() {
+    static $settings = null;
+    
+    if ($settings === null) {
+        $defaults = [
+            'excerpt_min' => 15,
+            'excerpt_max' => 35,
+            'categories'  => ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'],
+            'tags'        => ['full' => 'Full post', 'short' => 'Excerpt', 'list' => 'Thumbnail', 'website' => 'Online only'],
+            'default_tag' => 'short',
+            'img_w'       => 16,
+            'img_h'       => 9,
+            'new_days'    => 5,  
+            'stale_days'  => 18  
+        ];
+        $settings = wp_parse_args(get_option('anm_settings', []), $defaults); 
+        $settings['suffixes'] = array_map(fn($k) => "-$k", array_keys($settings['tags']));
+    }
+    return $settings;
+}
+
 // Load Composer Autoloader (GitHub Actions will build this)
 if (file_exists(plugin_dir_path(ANM_MAIN_FILE) . 'vendor/autoload.php')) {
     require_once plugin_dir_path(ANM_MAIN_FILE) . 'vendor/autoload.php';
@@ -37,24 +61,8 @@ if (is_admin()) {
     //require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/acf-migration.php';
 }
 
-/**
- * Retrieve default settings, with fallbacks
- */
-function anm_get_settings() {
-    $defaults = [
-        'excerpt_min' => 15,
-        'excerpt_max' => 35,
-        'categories'  => ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'],
-        'tags'        => ['full' => 'Full post', 'short' => 'Excerpt', 'list' => 'Title', 'website' => 'Website only'],
-        'img_w'       => 16,
-        'img_h'       => 9,
-        'new_days'    => 5,  
-        'stale_days'  => 18  
-    ];
-    return wp_parse_args(get_option('anm_settings', []), $defaults);
-}
-
 add_action('enqueue_block_editor_assets', function() {
+    $settings = anm_get_settings();
     $asset_file = include(plugin_dir_path(ANM_MAIN_FILE) . 'build/index.asset.php');
     wp_enqueue_script(
         'anm-editor-js',
@@ -64,11 +72,11 @@ add_action('enqueue_block_editor_assets', function() {
         true
     );
 
-    $settings = anm_get_settings();
-
     $encoded = json_encode([
         'excerptMin' => (int) $settings['excerpt_min'],
         'excerptMax' => (int) $settings['excerpt_max'],
+        'targetCategories' => $settings['categories'],
+        'tagSuffixes' => $settings['suffixes']
     ]);
     
     wp_add_inline_script(

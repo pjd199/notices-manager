@@ -31,12 +31,11 @@ register_deactivation_hook(ANM_MAIN_FILE, function() {
 function create_automated_snapshot() {
     global $wpdb;
     
-    $base_cats = ['introduction', 'news', 'events', 'jobs', 'prayer', 'volunteering'];
-    $suffixes  = ['-full', '-short', '-list', '-website'];
+    $settings = anm_get_settings();
     $all_ids   = [];
 
-    foreach ($base_cats as $cat) {
-        $tags = array_map(fn($s) => $cat . $s, $suffixes);
+    foreach ($settings['categories'] as $cat) {
+        $tags = array_map(fn($s) => $cat . $s, $settings['suffixes']);
         $p_ids = get_posts([
             'category_name' => $cat,
             'tax_query'     => [['taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $tags]],

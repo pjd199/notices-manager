@@ -22,9 +22,8 @@ function anm_render_row_content($post_id, $cat_slug, $categories) {
     $date_ts = $date_raw ? strtotime($date_raw) : false;
     
     $current_tags = wp_get_post_tags($post_id, ['fields' => 'slugs']);
-    $cat_suffixes = ($cat_slug === 'introduction' || $cat_slug === 'prayer') ? ['full'] : ['full', 'short', 'list', 'website'];
     $cat_specific_tags = [];
-    foreach ($cat_suffixes as $sfx) { $cat_specific_tags[] = $cat_slug . '-' . $sfx; }
+    foreach ($settings['suffixes'] as $sfx) { $cat_specific_tags[] = $cat_slug . $sfx; }
     $intersect = array_intersect($current_tags, $cat_specific_tags);
     $active_tag = reset($intersect);
 
@@ -32,7 +31,7 @@ function anm_render_row_content($post_id, $cat_slug, $categories) {
     if (has_post_thumbnail($post_id)) {
         $img_data = wp_get_attachment_image_src(get_post_thumbnail_id($post_id), 'full');
         $ratio = ($img_data && $img_data[2] > 0) ? ($img_data[1] / $img_data[2]) : 0;
-        $img_flag = (abs($ratio - ($sanitized['img_w']/$sanitized['img_h'])) < 0.02) ? '<span style="color:green;">✔</span>' : '<span style="color:orange;" title="Ratio: '.round($ratio, 2).':1">⚠</span>';
+        $img_flag = (abs($ratio - ($settings['img_w']/$settings['img_h'])) < 0.02) ? '<span style="color:green;">✔</span>' : '<span style="color:orange;" title="Ratio: '.round($ratio, 2).':1">⚠</span>';
     } else {
         $img_flag = '<span style="color:red;">✘</span>';
     }
@@ -71,7 +70,7 @@ function anm_render_row_content($post_id, $cat_slug, $categories) {
     if ($is_new) $row_bg = '#c5ff99';
     elseif ($is_stale) $row_bg = '#faa0a0';
 
-    $tag_labels = ['full' => 'Full post', 'short' => 'Excerpt', 'list' => 'Title', 'website' => 'Website only'];
+    $tag_labels = $settings['tags'];
 
     ob_start(); ?>
     <td class="column-title has-row-actions" data-modified="<?php echo $modified; ?>" data-bg="<?php echo $row_bg; ?>">
@@ -104,9 +103,9 @@ function anm_render_row_content($post_id, $cat_slug, $categories) {
     <td style="text-align:center;"><?= $excerpt_flag ?></td>
     <td>
         <select class="notice-tag-changer" data-postid="<?= $post_id ?>" data-catslug="<?= $cat_slug ?>">
-            <?php foreach ($cat_suffixes as $sfx) : $tag_value = $cat_slug . '-' . $sfx; ?>
+            <?php foreach (array_keys($settings['tags']) as $sfx) : $tag_value = $cat_slug . '-' . $sfx; ?>
                 <option value="<?= $tag_value ?>" <?= selected($active_tag, $tag_value) ?>>
-                    <?= isset($tag_labels[$sfx]) ? $tag_labels[$sfx] : ucfirst($sfx) ?>
+                    <?= isset($settings['tags'][$sfx]) ? $settings['tags'][$sfx] : ucfirst($sfx) ?>
                 </option>
             <?php endforeach; ?>
         </select>
@@ -117,7 +116,7 @@ function anm_render_row_content($post_id, $cat_slug, $categories) {
 }
 
 function anm_render_page() {
-    $categories = ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'];
+    $settings = anm_get_settings();
     ?>
     <style>
         .anm-wrap ~ .litespeed_icon.notice-success, .litespeed_icon.notice-success { display: none !important; }
@@ -136,13 +135,12 @@ function anm_render_page() {
         <hr class="wp-header-end">
     
     <?php
-    foreach ($categories as $cat_slug) {
+    foreach ($settings['categories'] as $cat_slug) {
         $cat_obj = get_category_by_slug($cat_slug);
         if (!$cat_obj) continue;
 
-        $cat_suffixes = ($cat_slug === 'introduction' || $cat_slug === 'prayer') ? ['full'] : ['full', 'short', 'list', 'website'];
         $cat_specific_tags = [];
-        foreach ($cat_suffixes as $sfx) { $cat_specific_tags[] = $cat_slug . '-' . $sfx; }
+        foreach ($settings['suffixes'] as $sfx) { $cat_specific_tags[] = $cat_slug . $sfx; }
 
         if ( $cat_slug === 'events' ) {
             // Posts with event_start_time - ordered by date ASC
@@ -193,7 +191,7 @@ function anm_render_page() {
             $undated_query = null;
         }
         $total_count = $query->found_posts + ( $undated_query ? $undated_query->found_posts : 0 );
-        $default_tag = ($cat_slug === 'introduction' || $cat_slug === 'prayer') ? "{$cat_slug}-full" : "{$cat_slug}-short";
+        $default_tag = $cat_slug .'-' . $settings['default_tag'];
         $new_post_url = admin_url("post-new.php?pre_cat={$cat_obj->term_id}&pre_tag={$default_tag}");
         ?>
         
@@ -221,7 +219,7 @@ function anm_render_page() {
                     while ( $undated_query->have_posts() ) : $undated_query->the_post();
                         $has_posts = true;
                         $pid     = get_the_ID();
-                        $content = anm_render_row_content( $pid, $cat_slug, $categories );
+                        $content = anm_render_row_content( $pid, $cat_slug, $settings['categories'] );
                         preg_match( '/data-bg="([^"]*)"/', $content, $m );
                         $bg_style = "background-color:#fff3cd;"; // Yellow to highlight missing date
                         ?>
@@ -235,7 +233,7 @@ function anm_render_page() {
                 if ( $query->have_posts() ) : while ( $query->have_posts() ) : $query->the_post();
                     $has_posts = true;
                     $pid     = get_the_ID();
-                    $content = anm_render_row_content( $pid, $cat_slug, $categories );
+                    $content = anm_render_row_content( $pid, $cat_slug, $settings['categories'] );
                     preg_match( '/data-bg="([^"]*)"/', $content, $m );
                     $bg_style = ! empty( $m[1] ) ? "background-color:{$m[1]};" : "";
                     ?>
@@ -370,7 +368,7 @@ add_action('wp_ajax_anm_sync_check', function() {
     check_ajax_referer('anm_nonce', 'nonce');
     $incoming = $_POST['posts'] ?? [];
     $updates = [];
-    $categories = ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'];
+    $settings = anm_get_settings();
 
     foreach ($incoming as $item) {
         $pid = intval($item['id']);
@@ -378,7 +376,7 @@ add_action('wp_ajax_anm_sync_check', function() {
         if ($post && $post->post_modified !== $item['modified']) {
             $updates[] = [
                 'id' => $pid,
-                'html' => anm_render_row_content($pid, sanitize_text_field($item['cat']), $categories)
+                'html' => anm_render_row_content($pid, sanitize_text_field($item['cat']), $settings['categories'])
             ];
         }
     }
@@ -391,22 +389,21 @@ add_action('wp_insert_post', function($post_id, $post, $update) {
     if (isset($_REQUEST['pre_tag'])) wp_set_post_tags($post_id, sanitize_text_field($_REQUEST['pre_tag']), true);
 }, 10, 3);
 
-// AJAX handlers (unchanged from 3.4 logic)
 add_action('wp_ajax_anm_move_post', function() {
     check_ajax_referer('anm_nonce', 'nonce');
+    $settings = anm_get_settings();
     $post_id = intval($_POST['post_id']);
     $dest_slug = sanitize_text_field($_POST['dest_cat']);
     if (!current_user_can('edit_post', $post_id)) wp_send_json_error();
     $cat = get_category_by_slug($dest_slug);
     if ($cat) wp_set_post_categories($post_id, [$cat->term_id]);
-    $all_slugs = ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'];
     $current_tags = wp_get_post_tags($post_id);
     foreach($current_tags as $tag) {
-        foreach($all_slugs as $slug) {
+        foreach($settings['categories'] as $slug) {
             if(strpos($tag->slug, $slug . '-') === 0) {
-                $suffix = str_replace($slug . '-', '', $tag->slug);
+                $suffix = str_replace($slug, '', $tag->slug);
                 wp_remove_object_terms($post_id, $tag->term_id, 'post_tag');
-                wp_set_post_terms($post_id, $dest_slug . '-' . $suffix, 'post_tag', true);
+                wp_set_post_terms($post_id, $dest_slug . $suffix, 'post_tag', true);
             }
         }
     }
@@ -416,14 +413,25 @@ add_action('wp_ajax_anm_move_post', function() {
 
 add_action('wp_ajax_anm_update_tag', function() {
     check_ajax_referer('anm_nonce', 'nonce');
+    $settings = anm_get_settings();
     $post_id = intval($_POST['post_id']);
     $cat_slug = sanitize_text_field($_POST['cat_slug']);
     $new_tag = sanitize_text_field($_POST['tag']);
-    $all_suffixes = ['full', 'short', 'list', 'website'];
-    $tags_to_strip = []; foreach($all_suffixes as $s) { $tags_to_strip[] = $cat_slug . '-' . $s; }
+    $tags_to_strip = []; foreach($settings['suffixes'] as $s) { $tags_to_strip[] = $cat_slug . $s; }
     if (current_user_can('edit_post', $post_id)) {
-        wp_remove_object_terms($post_id, $tags_to_strip, 'post_tag');
-        if ($new_tag !== 'none') wp_set_post_terms($post_id, $new_tag, 'post_tag', true);
+        $current_post_tags = wp_get_object_terms($post_id, 'post_tag', ['fields' => 'slugs']);
+        if (!is_wp_error($current_post_tags) && !empty($current_post_tags)) {
+            $actual_removals = array_intersect($tags_to_strip, $current_post_tags);
+            if (!empty($actual_removals)) {
+                wp_remove_object_terms($post_id, $actual_removals, 'post_tag');
+            }
+        }
+        if ($new_tag !== 'none') {
+            if (!term_exists($new_tag, 'post_tag')) {
+                wp_insert_term($new_tag, 'post_tag');
+            }
+            wp_set_post_terms($post_id, $new_tag, 'post_tag', true);
+        }
         anm_purge_notice_caches($post_id);
         wp_send_json_success();
     }

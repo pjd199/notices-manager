@@ -25,21 +25,19 @@ register_deactivation_hook(ANM_MAIN_FILE, function() {
 
 // The actual cleanup task
 add_action('anm_expired_cleanup', function () {
+    $settings = anm_get_settings();
     $today = date('Y-m-d'); // Current date in ISO format for reliable comparison
-    $controlled_tags = [
-        'introduction-full',
-        'news-full', 'news-short', 'news-list', 'news-website',
-        'events-full', 'events-short', 'events-list', 'events-website',
-        'prayer-full', 'prayer-short', 'prayer-list', 'prayer-website',
-        'jobs-full', 'jobs-short', 'jobs-list', 'jobs-website',
-        'volunteering-full', 'volunteering-short', 'volunteering-list', 'volunteering-website'
-    ];
+    $controlled_tags = [];
+    foreach ($settings['categories'] as $category) {
+        foreach ($settings['suffixes'] as $suffix) {            
+            $controlled_tags[] = "{$category}-{$suffix}";
+        }
+    }
 
     $args = [
         'post_type'      => 'post',
         'posts_per_page' => -1,
         'post_status'    => ['publish', 'pending', 'draft', 'future', 'private'],
-        // We remove 'category_name' => 'events' so it checks ALL categories for the 'expires' field
         'tax_query'      => [[
             'taxonomy' => 'post_tag',
             'field'    => 'slug',

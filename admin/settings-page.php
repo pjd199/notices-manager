@@ -60,6 +60,8 @@ function anm_sanitize_settings($input) {
         }
     }
 
+    $sanitized['default_tag'] = $input['default_tag'] ?? "short";
+
     return $sanitized;
 }
 
@@ -177,6 +179,15 @@ function anm_render_settings_page() {
                         </p>
                     </td>
                 </tr>
+
+                <tr>
+                    <th scope="row"><label>Default tag</label></th>
+                    <td>
+                        <input name="anm_settings[default_tag]" type="text" value="<?= esc_attr($settings['default_tag']) ?>" class="small-text"> 
+                        <p class="description">Default tag suffix.</p>
+                    </td>
+                </tr>
+
             </table>
 
             <?php submit_button(); ?>
