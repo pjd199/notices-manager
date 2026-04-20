@@ -171,7 +171,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
     while ($query->have_posts()) {
         $query->the_post();
         $permalink = get_permalink();
-        $thumbnail = get_the_post_thumbnail_url(get_the_ID(), 'medium');
+        $thumbnail = get_the_post_thumbnail_url(get_the_ID(), 'medium_large');
         
         $post_tags = get_the_tags();
         $has_short_tag = false;
