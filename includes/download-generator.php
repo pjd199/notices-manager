@@ -151,6 +151,11 @@ function get_purifier() {
     // Force links to be absolute (prevents relative link weirdness in DOCX/PDF)
     $config->set('URI.Base', get_site_url());
     $config->set('URI.MakeAbsolute', true);
+    $config->set('AutoFormat.Linkify', false); // prevents bare URLs being wrapped in extra <a> tags
+    
+    // Strip empty tags
+    $config->set('AutoFormat.RemoveEmpty', true);
+    $config->set('AutoFormat.RemoveEmpty.RemoveNbsp', true); // also catches &nbsp; only elements
 
     // Cache dir — use WordPress uploads so it's writable
     $upload_dir = wp_upload_dir();
