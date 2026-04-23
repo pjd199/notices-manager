@@ -7,13 +7,13 @@ if (!defined('ABSPATH')) exit;
 define('ANM_EXPIRED_CLEANUP', 'anm_expired_cleanup');
 
 /**
- * Scheduled Task: Remove tags from expired events daily at 12:01
+ * Scheduled Task: Remove tags from expired events daily at 00:15
  */
 register_activation_hook(ANM_MAIN_FILE, function() {
     if (!wp_next_scheduled(ANM_EXPIRED_CLEANUP)) {
         // Calculate next 00:01 in site's local time
         $timezone = wp_timezone();
-        $next_run = new \DateTime('today 00:01', $timezone);
+        $next_run = new \DateTime('today 00:15', $timezone);
         if ($next_run->getTimestamp() <= time()) {
             $next_run->modify('+1 day');
         }
@@ -28,7 +28,7 @@ register_deactivation_hook(ANM_MAIN_FILE, function() {
 // The actual cleanup task
 add_action(ANM_EXPIRED_CLEANUP, function () {
     $settings = anm_get_settings();
-    $today = date('Y-m-d'); // Current date in ISO format for reliable comparison
+    $today = current_time('Y-m-d');
     $controlled_tags = [];
     foreach ($settings['categories'] as $category) {
         foreach ($settings['suffixes'] as $suffix) {            
@@ -39,7 +39,7 @@ add_action(ANM_EXPIRED_CLEANUP, function () {
     $args = [
         'post_type'      => 'post',
         'posts_per_page' => -1,
-        'post_status'    => ['publish', 'pending', 'draft', 'future', 'private'],
+        'post_status'    => ['publish'],
         'tax_query'      => [[
             'taxonomy' => 'post_tag',
             'field'    => 'slug',
@@ -51,13 +51,13 @@ add_action(ANM_EXPIRED_CLEANUP, function () {
                 'key'     => 'event_start_time',
                 'value'   => $today,
                 'compare' => '<',
-                'type'    => 'DATE',
+                'type'    => 'CHAR',
             ],
             [
                 'key'     => 'expiry_date',
                 'value'   => $today,
                 'compare' => '<',
-                'type'    => 'DATE',
+                'type'    => 'CHAR',
             ],
         ],
     ];
