@@ -214,7 +214,8 @@ add_action('template_redirect', function() {
                 'category_name' => $cat,
                 'tax_query'     => [['taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $tags]],
                 'fields'        => 'ids', 
-                'posts_per_page' => -1
+                'posts_per_page' => -1,
+                'post_status'    => 'publish'
             ]);
             $all_ids = array_merge($all_ids, $p_ids);
         }
@@ -417,6 +418,9 @@ add_action('template_redirect', function() {
                             h1 { text-align: center; }
                             h2 { background:#f0f0f0; padding:5px; }
                             h1, h2, h3, h4, h5, h6 { break-after: avoid; page-break-after: avoid; }
+                            @page {
+                                margin: 1cm;
+                            }
                         </style>
                     </head>
                     <body>
@@ -433,9 +437,9 @@ add_action('template_redirect', function() {
                 $event_start_raw = get_post_meta($p->ID, 'event_start_time', true);
                 if ($event_start_raw) {
                     $date = new \DateTime($event_start_raw);
-                    $html .= '<div><i>'. $date->format('l jS F Y \a\t g:ia') . '</i></div>';
+                    $html .= '<i>'. $date->format('l jS F Y \a\t g:ia') . '</i>';
                 }
-                $html .= '<div>'.$clean_content.'</div>';
+                $html .= $clean_content;
                 $add_hr = true;
             }
         }
@@ -443,6 +447,18 @@ add_action('template_redirect', function() {
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
+        
+        $canvas = $dompdf->getCanvas();
+        $canvas->page_script(function($pageNumber, $pageCount, $canvas, $fontMetrics) {
+            $font = $fontMetrics->get_font('helvetica');
+            $w = $canvas->get_width();
+            $h = $canvas->get_height();
+            $text = $pageNumber . ' / ' . $pageCount;
+            $size = 10;
+            $textWidth = $fontMetrics->get_text_width($text, $font, $size);
+            $canvas->text(($w - $textWidth) / 2, $h - 28 - $size, $text, $font, $size, [0.6, 0.6, 0.6]);
+        });
+
         $dompdf->stream('Notices-' . $year . '-' . $month . '-' . $day . '.pdf');
         exit;
     }
