@@ -397,9 +397,9 @@ add_action('template_redirect', function() {
         header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
         header('Pragma: public');
     
-        if (ob_get_length()) ob_clean();
-        flush();
-    
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
         $objWriter = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
         $objWriter->save('php://output');
         exit;
@@ -407,13 +407,11 @@ add_action('template_redirect', function() {
 
     // --- PDF GENERATION (Using Dompdf) ---
     if ($pdf_req) {
-        if (ob_get_length()) ob_end_clean();
-        
         $html = '<html>
                     <head>
                         <meta charset="UTF-8">
                         <style>
-                            body { font-family: sans-serif; }
+                            body { font-family: helvetica; }
                             h1 { text-align: center; }
                             h2 { background:#f0f0f0; padding:5px; }
                             h1, h2, h3, h4, h5, h6 { break-after: avoid; page-break-after: avoid; }
@@ -444,24 +442,6 @@ add_action('template_redirect', function() {
         }
         $html .= '</body></html>';
 
-        $upload_dir = wp_upload_dir();
-        $tmp_path = $upload_dir['basedir'] . '/mpdf-tmp';
-        if (!is_dir($tmp_path)) wp_mkdir_p($tmp_path);
-
-        $mpdf = new \Mpdf\Mpdf([
-            'tempDir'       => $tmp_path,
-            'margin_top'    => 10,
-            'margin_bottom' => 10,
-            'margin_left'   => 10,
-            'margin_right'  => 10,
-            'default_font'  => 'dejavusans',
-        ]);
-        $mpdf->SetFooter('{PAGENO} / {nb}');
-        $mpdf->WriteHTML($html);
-        $mpdf->Output('Notices-' . $year . '-' . $month . '-' . $day . '.pdf', 'D');
-        exit;
-
-        /*
         $dompdf = new \Dompdf\Dompdf();
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
@@ -477,9 +457,11 @@ add_action('template_redirect', function() {
             $textWidth = $fontMetrics->get_text_width($text, $font, $size);
             $canvas->text(($w - $textWidth) / 2, $h - 28 - $size, $text, $font, $size, [0.6, 0.6, 0.6]);
         });
-
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
         $dompdf->stream('Notices-' . $year . '-' . $month . '-' . $day . '.pdf');
         exit;
-        */
+        
     }
 });
