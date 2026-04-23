@@ -408,7 +408,6 @@ add_action('template_redirect', function() {
     // --- PDF GENERATION (Using Dompdf) ---
     if ($pdf_req) {
         if (ob_get_length()) ob_end_clean();
-        $dompdf = new \Dompdf\Dompdf();
         
         $html = '<html>
                     <head>
@@ -444,6 +443,26 @@ add_action('template_redirect', function() {
             }
         }
         $html .= '</body></html>';
+
+        $upload_dir = wp_upload_dir();
+        $tmp_path = $upload_dir['basedir'] . '/mpdf-tmp';
+        if (!is_dir($tmp_path)) wp_mkdir_p($tmp_path);
+
+        $mpdf = new \Mpdf\Mpdf([
+            'tempDir'       => $tmp_path,
+            'margin_top'    => 10,
+            'margin_bottom' => 10,
+            'margin_left'   => 10,
+            'margin_right'  => 10,
+            'default_font'  => 'dejavusans',
+        ]);
+        $mpdf->SetFooter('{PAGENO} / {nb}');
+        $mpdf->WriteHTML($html);
+        $mpdf->Output('Notices-' . $year . '-' . $month . '-' . $day . '.pdf', 'D');
+        exit;
+
+        /*
+        $dompdf = new \Dompdf\Dompdf();
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
@@ -461,5 +480,6 @@ add_action('template_redirect', function() {
 
         $dompdf->stream('Notices-' . $year . '-' . $month . '-' . $day . '.pdf');
         exit;
+        */
     }
 });
