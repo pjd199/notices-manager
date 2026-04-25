@@ -109,8 +109,8 @@ function parse_node_to_word($node, &$section) {
 /**
  * Handles bold, italics, and links inside a paragraph (TextRun)
  */
-function process_inline_tags($node, &$textRun) {
-    $fontStyle = [];
+function process_inline_tags($node, &$textRun, $fontStyle = []) {
+    error_log($node->nodeName . ": $node->nodeValue");
     if ($node->nodeName === 'strong' || $node->nodeName === 'b') $fontStyle['bold'] = true;
     if ($node->nodeName === 'em' || $node->nodeName === 'i') $fontStyle['italic'] = true;
     
@@ -127,10 +127,12 @@ function process_inline_tags($node, &$textRun) {
         if (strlen(trim($clean_text)) > 0) {
             $textRun->addText($clean_text, $fontStyle);
         }
+    } elseif ($node->nodeName === 'br') {
+       $textRun->addTextBreak();
     } else {
         // Recurse for nested tags like <strong><em>text</em></strong>
         foreach ($node->childNodes as $child) {
-            process_inline_tags($child, $textRun);
+            process_inline_tags($child, $textRun, $fontStyle);
         }
     }
 }
@@ -169,7 +171,7 @@ function get_purifier() {
 
 function headings_to_bold($html) {
     foreach (['h1','h2','h3','h4','h5','h6'] as $tag) {
-        $html = preg_replace('/<'.$tag.'>(.*?)<\/'.$tag.'>/is', '<strong>$1</strong>', $html);
+        $html = preg_replace('/<'.$tag.'>(.*?)<\/'.$tag.'>/is', '<p><b>$1</b></p>', $html);
     }
     return $html;
 }
@@ -295,7 +297,16 @@ add_action('template_redirect', function() {
 
         // Add styles
         $headingStyle = array('name' => 'Verdana', 'size' => 20, 'bold' => true, 'color' => '333333');
-        $phpWord->addTitleStyle(1, [...$headingStyle, 'size' => 16], array('spaceAfter' => 240, 'keepNext' => true));
+        $phpWord->addTitleStyle(1, [...$headingStyle, 'size' => 16], array(
+            'spaceBefore' => 240,     
+            'spaceAfter' => 240,     
+            'keepNext' => true, 
+            'shading' => [
+                'type'  => \PhpOffice\PhpWord\SimpleType\TblWidth::AUTO,
+                'color' => 'auto',
+                'fill'  => 'f0f0f0'
+            ]
+        ));
         $phpWord->addTitleStyle(2, [...$headingStyle, 'size' => 14], array('spaceAfter' => 120, 'keepNext' => true));
         $phpWord->addTitleStyle(3, [...$headingStyle, 'size' => 12], array('spaceAfter' => 120, 'keepNext' => true));
         
@@ -329,7 +340,7 @@ add_action('template_redirect', function() {
         );
         
         // Create the TOC
-        $section->addTitle("Contents", 2);
+        $section->addTitle("Contents", 1);
         foreach ($data as $cat => $posts) {
             // Category Heading
             $section->addTitle(ucfirst($cat), 3);
@@ -339,14 +350,22 @@ add_action('template_redirect', function() {
                 $textRun->addLink('#' . strval($p->ID), $p->post_title, array('color' => '0000FF', 'underline' => 'single'));
             }
         }
-        $section->addTextBreak(1);
+        //$section->addTextBreak(1);
     
         foreach ($data as $cat => $posts) {
             // Add a Title style for categories
             $section->addTitle(strtoupper($cat), 1);
-
+            $add_hr = false;
             foreach ($posts as $p) {
-
+                if ($add_hr) {
+                    /*$section->addText('', [], [
+                        'borderBottomSize' => 6,
+                        'borderBottomColor' => '333333',
+                        'spaceAfter' => 120,
+                        'spaceBefore' => 120,
+                    ]);*/
+                }
+                $add_hr = true;
                 // Add the Title
                 $section->addBookmark($p->ID);
                 $section->addTitle($p->post_title, 2);
@@ -362,7 +381,8 @@ add_action('template_redirect', function() {
                 
                 // add the body
                 $dom = new \DOMDocument();
-                $html_string = '<?xml encoding="UTF-8"><html><head><meta charset="UTF-8"></head><body>' . $p->post_content . '</body></html>';
+                $clean_content = headings_to_bold($purifier->purify($p->post_content));
+                $html_string = '<?xml encoding="UTF-8"><html><head><meta charset="UTF-8"></head><body>' . $clean_content . '</body></html>';
                 @$dom->loadHTML($html_string, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
             
                 // Get the body element we just created
@@ -373,9 +393,9 @@ add_action('template_redirect', function() {
                         parse_node_to_word($node, $section);
                     }
                 } else {
-                    $section->addText(strip_tags($p->post_content));
+                    $section->addText(strip_tags($clean_content));
                 }
-                $section->addTextBreak(1);
+                //$section->addTextBreak(1);
             }
         }
         
