@@ -116,6 +116,6 @@ add_action(ANM_EXPIRED_CLEANUP, function () {
             implode('', $cleaned_posts)
         );
         $headers = ['Content-Type: text/html; charset=UTF-8'];
-        wp_mail($settings = anm_get_settings(), $subject, $message, $headers);
+        wp_mail(get_bloginfo('admin_email'), $subject, $message, $headers);
     }
 });
