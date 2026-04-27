@@ -28,6 +28,11 @@ register_deactivation_hook(ANM_MAIN_FILE, function() {
 // The actual cleanup task
 add_action(ANM_EXPIRED_CLEANUP, function () {
     $settings = anm_get_settings();
+
+    if (!$settings['cleanup_cron']) {
+        return;
+    }
+
     $today = current_time('Y-m-d');
     $controlled_tags = [];
     foreach ($settings['categories'] as $category) {
@@ -45,37 +50,72 @@ add_action(ANM_EXPIRED_CLEANUP, function () {
             'field'    => 'slug',
             'terms'    => $controlled_tags,
         ]],
-        'meta_query'     => [
+        'meta_query' => [
             'relation' => 'OR',
             [
-                'key'     => 'event_start_time',
-                'value'   => $today,
-                'compare' => '<',
-                'type'    => 'CHAR',
+                'relation' => 'AND',
+                [
+                    'key'     => 'event_start_time',
+                    'value'   => '',
+                    'compare' => '!=',
+                ],
+                [
+                    'key'     => 'event_start_time',
+                    'value'   => $today,
+                    'compare' => '<',
+                    'type'    => 'CHAR',
+                ],
             ],
             [
-                'key'     => 'expiry_date',
-                'value'   => $today,
-                'compare' => '<',
-                'type'    => 'CHAR',
+                'relation' => 'AND',
+                [
+                    'key'     => 'expiry_date',
+                    'value'   => '',
+                    'compare' => '!=',
+                ],
+                [
+                    'key'     => 'expiry_date',
+                    'value'   => $today,
+                    'compare' => '<',
+                    'type'    => 'CHAR',
+                ],
             ],
         ],
     ];
 
     $query = new \WP_Query($args);
-
     if (!$query->have_posts()) return;
-
+    
+    $cleaned_posts = [];
+    
     while ($query->have_posts()) {
         $query->the_post();
         $post_id = get_the_ID();
-
+        $cleaned_posts[] = sprintf(
+            '<li><a href="%s">%s</a> (expiry: %s, start_time: %s)</li>',
+            get_permalink($post_id),
+            esc_html(get_the_title($post_id)),
+            get_post_meta($post_id, 'expiry_date', true) ?: '(none)',
+            get_post_meta($post_id, 'event_start_time', true) ?: '(none)'
+        );
+        
         // Strip the tags to "Archive" the post from the manager
         wp_remove_object_terms($post_id, $controlled_tags, 'post_tag');
-
+        
         // Purge caches so the site updates immediately
         anm_purge_notice_caches($post_id);
     }
-
+    
     wp_reset_postdata();
+    
+    if ($settings['cleanup_email'] && !empty($cleaned_posts)) {
+        $subject = sprintf('[%s] %d expired notice(s) cleaned up', get_bloginfo('name'), count($cleaned_posts));
+        $message = sprintf(
+            '<p>The following posts have been archived by the Notices Manager ANM on <strong>%s</strong>:</p><ul>%s</ul><p>This is an automated message from Advanced Notices Manager.</p>',
+            get_bloginfo('name'),
+            implode('', $cleaned_posts)
+        );
+        $headers = ['Content-Type: text/html; charset=UTF-8'];
+        wp_mail($settings = anm_get_settings(), $subject, $message, $headers);
+    }
 });

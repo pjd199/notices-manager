@@ -33,13 +33,15 @@ add_action('admin_enqueue_scripts', function($hook) {
  */
 function anm_sanitize_settings($input) {
     $sanitized = [];
-    $sanitized['excerpt_min'] = absint($input['excerpt_min'] ?? 15);
-    $sanitized['excerpt_max'] = absint($input['excerpt_max'] ?? 35);
-    $sanitized['img_w']       = absint($input['img_w'] ?? 16);
-    $sanitized['img_h']       = absint($input['img_h'] ?? 9);
-    $sanitized['new_days']    = absint($input['new_days'] ?? 5);
-    $sanitized['stale_days']  = absint($input['stale_days'] ?? 18);
-    
+    $sanitized['excerpt_min']   = absint($input['excerpt_min'] ?? 15);
+    $sanitized['excerpt_max']   = absint($input['excerpt_max'] ?? 35);
+    $sanitized['img_w']         = absint($input['img_w'] ?? 16);
+    $sanitized['img_h']         = absint($input['img_h'] ?? 9);
+    $sanitized['new_days']      = absint($input['new_days'] ?? 5);
+    $sanitized['stale_days']    = absint($input['stale_days'] ?? 18);
+    $sanitized['cleanup_cron']  = isset($input['cleanup_cron']) && $input['cleanup_cron'] == '1';
+    $sanitized['cleanup_email'] = isset($input['cleanup_email']) && $input['cleanup_email'] == '1';
+
     // Sanitize Categories (Checkbox array from sortable list)
     $sanitized['categories'] = [];
     if (!empty($input['categories']) && is_array($input['categories'])) {
@@ -132,6 +134,29 @@ function anm_render_settings_page() {
                         <p class="description">Days until post is highlighted as stale.</p>
                     </td>
                 </tr>
+
+                <tr>
+                    <th scope="row"><label for="anm_cleanup_cron">Archive expired posts</label></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="anm_settings[cleanup_cron]" id="anm_cleanup_cron" value="1" <?= checked(true, (bool)($settings['cleanup_cron'] ?? true), false) ?>>
+                            Archive expired posts
+                        </label>
+                        <p class="description">When enabled, automatically archive expired posts at 00:15 every day</p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><label for="anm_cleanup_email">Send expired posts email</label></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="anm_settings[cleanup_email]" id="anm_cleanup_email" value="1" <?= checked(true, (bool)($settings['cleanup_email'] ?? true), false) ?>>
+                            Send email
+                        </label>
+                        <p class="description">When enabled, sends an email when posts are automatically archived.</p>
+                    </td>
+                </tr>
+
 
                 <tr>
                     <th scope="row" style="vertical-align: top;">Managed Categories</th>

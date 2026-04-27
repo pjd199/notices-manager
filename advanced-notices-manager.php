@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.56
+ * Version: 1.0.57
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
@@ -25,17 +25,19 @@ function anm_get_settings() {
     
     if ($settings === null) {
         $defaults = [
-            'excerpt_min' => 15,
-            'excerpt_max' => 35,
-            'categories'  => ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'],
-            'tags'        => ['full' => 'Full post', 'short' => 'Excerpt', 'list' => 'Thumbnail', 'website' => 'Online only'],
-            'default_tag' => 'short',
-            'img_w'       => 16,
-            'img_h'       => 9,
-            'new_days'    => 5,  
-            'stale_days'  => 18  
+            'excerpt_min'   => 15,
+            'excerpt_max'   => 35,
+            'categories'    => ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'],
+            'tags'          => ['full' => 'Full post', 'short' => 'Excerpt', 'list' => 'Thumbnail', 'website' => 'Online only'],
+            'default_tag'   => 'short',
+            'img_w'         => 16,
+            'img_h'         => 9,
+            'new_days'      => 5,  
+            'stale_days'    => 18,
+            'cleanup_cron'  => true,
+            'cleanup_email' => true,
         ];
-        $settings = wp_parse_args(get_option('anm_settings', []), $defaults); 
+        $settings = wp_parse_args(get_option('anm_settings', []), $defaults);
         $settings['suffixes'] = array_map(fn($k) => "-$k", array_keys($settings['tags']));
     }
     return $settings;
