@@ -170,18 +170,18 @@ function render_notices_archive_page() {
                     // Prepare date parts for query arguments
                     $timestamp = strtotime($row->archive_date);
                     $args = [
-                        'notice_archive_year'  => date('Y', $timestamp),
-                        'notice_archive_month' => date('m', $timestamp),
-                        'notice_archive_day'   => date('d', $timestamp)
+                        'year'  => date('Y', $timestamp),
+                        'month' => date('m', $timestamp),
+                        'day'   => date('d', $timestamp)
                     ];
                 ?>
                 <tr>
                     <td><strong><?php echo date('jS M Y', $timestamp); ?></strong></td>
                     <td><?php echo count(explode(',', $row->post_ids)); ?></td>
                     <td>
-                        <a href="<?php echo add_query_arg(array_merge(['notice_archive_html' => '1'], $args), home_url('/')); ?>" target="_blank">View HTML</a> |
-                        <a href="<?php echo add_query_arg(array_merge(['notice_archive_docx' => '1'], $args), home_url('/')); ?>">DOCX</a> |
-                        <a href="<?php echo add_query_arg(array_merge(['notice_archive_pdf' => '1'], $args), home_url('/')); ?>">PDF</a> |
+                        <a href="<?php echo add_query_arg(array_merge(['plain_text' => 'html', 'toc' => false], $args), home_url('/')); ?>" target="_blank">View HTML</a> |
+                        <a href="<?php echo add_query_arg(array_merge(['plain_text' => 'docx'], $args), home_url('/')); ?>">DOCX</a> |
+                        <a href="<?php echo add_query_arg(array_merge(['plain_text' => 'pdf'], $args), home_url('/')); ?>">PDF</a> |
                         <a href="<?php echo wp_nonce_url(admin_url('edit.php?page=notices-archive&action=delete&id=' . $row->id), 'delete_notice_' . $row->id); ?>" 
                            style="color: #b32d2e;" 
                            onclick="return confirm('Are you sure you want to delete this archive?');">Delete</a>

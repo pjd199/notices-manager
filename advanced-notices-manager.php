@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Advanced Notices Manager
  * Description: Notice manager designed for Horsham Churches Together
- * Version: 1.0.58
+ * Version: 1.1.0
  * Author: Pete Dibdin
  * License: MIT
  * Plugin URI: https://github.com/pjd199/notices-manager
@@ -51,7 +51,10 @@ if (file_exists(plugin_dir_path(ANM_MAIN_FILE) . 'vendor/autoload.php')) {
 // include Sub-modules
 require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/purge-cache.php';
 require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/scheduled-cleanup.php';
-require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/download-generator.php';
+require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/html-purifier.php';
+require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/html-to-docx.php';
+require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/plain-text-redirect.php';
+require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/plain-text-html.php';
 require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/post-meta.php';
 require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/event-date-block.php';
 
@@ -62,6 +65,13 @@ if (is_admin()) {
     require_once plugin_dir_path(ANM_MAIN_FILE) . 'admin/archive-page.php';
     //require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/acf-migration.php';
 }
+
+// Load MailPoet shortcodes, if MailPoet plugin is installed
+add_action('plugins_loaded', function() {
+    if (class_exists('MailPoet\API\API')) {
+        require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/mailpoet-integration.php';
+    }
+});
 
 add_action('enqueue_block_editor_assets', function() {
     $settings = anm_get_settings();
@@ -86,13 +96,6 @@ add_action('enqueue_block_editor_assets', function() {
         'window.ANM_SETTINGS = ' . $encoded . ';', 
         'before'
     );
-});
-
-// Load MailPoet shortcodes, if MailPoet plugin is installed
-add_action('plugins_loaded', function() {
-    if (class_exists('MailPoet\API\API')) {
-        require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/mailpoet-integration.php';
-    }
 });
 
 // Check for latest updates from GitHub

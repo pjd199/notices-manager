@@ -7,11 +7,11 @@ if (!defined('ABSPATH')) exit;
 add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $subscriber, $queue, $newsletter_body, $arguments) {
     if (strpos($shortcode, '[custom:download_plain_text') !== 0) return $shortcode;
 
-    $date_args = '&notice_archive_year=' . date('Y') . '&notice_archive_month=' . date('m') . '&notice_archive_day=' . date('d');
-    return '<div><p>Also available in text only versions: 
-                <a href="' . home_url('/?notice_archive_html=1') . $date_args . '" target="_blank">online</a>, 
-                <a href="' . home_url('/?notice_archive_pdf=1') . $date_args . '" target="_blank">PDF</a>, 
-                <a href="' . home_url('/?notice_archive_docx=1') . $date_args . '" target="_blank">DOCX</a>
+    $date_args = '&year=' . date('Y') . '&month=' . date('m') . '&day=' . date('d');
+    return '<div><p>Also available in text only versions:
+                <a href="' . home_url('/?plain_text=html&toc=false') . $date_args . '" target="_blank">online</a>, 
+                <a href="' . home_url('/?plain_text=pdf') . $date_args . '" target="_blank">PDF</a>, 
+                <a href="' . home_url('/?plain_text=docx') . $date_args . '" target="_blank">DOCX</a>
             </p></div>';
 }, 10, 6);
 
