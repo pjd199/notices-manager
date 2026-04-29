@@ -25,8 +25,8 @@ function organize_post_data($all_posts) {
     foreach ($data as $cat => &$posts) {
         if ($cat === 'events') {
             usort($posts, function($a, $b) {
-                $date_a = get_post_meta($a->ID, 'event_start', true);
-                $date_b = get_post_meta($b->ID, 'event_start', true);
+                $date_a = get_post_meta($a->ID, 'event_start_time', true);
+                $date_b = get_post_meta($b->ID, 'event_start_time', true);
         
                 // If both are missing, sort by title as a fallback
                 if (empty($date_a) && empty($date_b)) {
