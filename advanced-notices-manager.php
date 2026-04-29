@@ -51,6 +51,8 @@ if (file_exists(plugin_dir_path(ANM_MAIN_FILE) . 'vendor/autoload.php')) {
 // include Sub-modules
 require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/purge-cache.php';
 require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/scheduled-cleanup.php';
+require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/archive-snapshot.php';
+require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/scheduled-archive.php';
 require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/html-purifier.php';
 require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/html-to-docx.php';
 require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/plain-text-redirect.php';
