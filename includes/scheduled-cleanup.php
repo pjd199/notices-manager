@@ -111,7 +111,7 @@ add_action(ANM_EXPIRED_CLEANUP, function () {
     if ($settings['cleanup_email'] && !empty($cleaned_posts)) {
         $subject = sprintf('[%s] %d expired notice(s) cleaned up', get_bloginfo('name'), count($cleaned_posts));
         $message = sprintf(
-            '<p>The following posts have been archived by the Notices Manager ANM on <strong>%s</strong>:</p><ul>%s</ul><p>This is an automated message from Advanced Notices Manager.</p>',
+            '<p>The following posts have been archived by the Advanced Notices Manager on <strong>%s</strong>:</p><ul>%s</ul><p>This is an automated message from the Advanced Notices Manager plugin.</p>',
             get_bloginfo('name'),
             implode('', $cleaned_posts)
         );
