@@ -2,6 +2,8 @@
 
 namespace AdvancedNoticesManager;
 
+if (!defined('ABSPATH')) exit;
+
 class HeadingToParagraphFilter extends \HTMLPurifier_Filter
 {
     public $name = 'HeadingToParagraph';

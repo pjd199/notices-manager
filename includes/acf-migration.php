@@ -5,6 +5,10 @@
  * Remove this file after running.
  */
 
+namespace AdvancedNoticesManager;
+
+if (!defined('ABSPATH')) exit;
+
 add_action( 'admin_notices', function() {
 
     if ( ! current_user_can( 'manage_options' ) || ! isset( $_GET['run_anm_migration'] ) ) {

@@ -2,6 +2,8 @@
 
 namespace AdvancedNoticesManager;
 
+if (!defined('ABSPATH')) exit;
+
 add_action('init', function () {
     register_block_type(plugin_dir_path(ANM_MAIN_FILE) . 'build/event-date-block', [
         'render_callback' => function (array $attributes, string $content, \WP_Block $block): string {

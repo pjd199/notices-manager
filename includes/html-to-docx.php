@@ -2,6 +2,8 @@
 
 namespace AdvancedNoticesManager;
 
+if (!defined('ABSPATH')) exit;
+
 function parse_node_to_word($node, &$section) {
     // Check for Text Nodes (Type 3)
     if ($node->nodeType === 3) {

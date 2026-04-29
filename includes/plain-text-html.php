@@ -2,6 +2,8 @@
 
 namespace AdvancedNoticesManager;
 
+if (!defined('ABSPATH')) exit;
+
 function organize_post_data($all_posts) {
     $settings = anm_get_settings();
     $data = array_fill_keys($settings['categories'], []);
