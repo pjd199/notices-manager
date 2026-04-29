@@ -80,7 +80,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
         $output .= '
         <tr>
             <td style="padding-bottom:30px;">
-                <table style="width="100%;">';
+                <table style="width=100%;">';
 
         if ($show_image && $thumbnail) {
             $output .= '                
