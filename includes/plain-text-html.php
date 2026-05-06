@@ -153,7 +153,7 @@ END;
             $event_start_raw = get_post_meta($p->ID, 'event_start_time', true);
             if ($event_start_raw) {
                 $date = new \DateTime($event_start_raw);
-                $html .= '<i>'. $date->format('l jS F Y \a\t g:ia') . '</i>';
+                $html .= '<p><i>'. $date->format('l jS F Y \a\t g:ia') . '</i></p>';
             }
             //$html .= headings_to_bold($purifier->purify(apply_filters('the_content', $p->post_content)));
             $html .= $purifier->purify(apply_filters('the_content', $p->post_content));
