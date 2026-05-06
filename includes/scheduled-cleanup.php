@@ -85,33 +85,48 @@ add_action(ANM_EXPIRED_CLEANUP, function () {
 
     $query = new \WP_Query($args);
     if (!$query->have_posts()) return;
-    
+
     $cleaned_posts = [];
-    
+
     while ($query->have_posts()) {
         $query->the_post();
         $post_id = get_the_ID();
+
+        $expiry     = get_post_meta($post_id, 'expiry_date', true);
+        $start_time = get_post_meta($post_id, 'event_start_time', true);
+
+        $meta_parts = [];
+        if ($expiry)     $meta_parts[] = 'expiry: ' . $expiry;
+        if ($start_time) $meta_parts[] = 'start time: ' . $start_time;
+        $meta_str = $meta_parts ? ' (' . implode(', ', $meta_parts) . ')' : '';
+
         $cleaned_posts[] = sprintf(
-            '<li><a href="%s">%s</a> (expiry: %s, start_time: %s)</li>',
+            '<li><a href="%s">%s</a>%s</li>',
             get_permalink($post_id),
             esc_html(get_the_title($post_id)),
-            get_post_meta($post_id, 'expiry_date', true) ?: '(none)',
-            get_post_meta($post_id, 'event_start_time', true) ?: '(none)'
+            $meta_str
         );
-        
+
         // Strip the tags to "Archive" the post from the manager
         wp_remove_object_terms($post_id, $controlled_tags, 'post_tag');
-        
+
         // Purge caches so the site updates immediately
         anm_purge_notice_caches($post_id);
     }
-    
+
     wp_reset_postdata();
-    
+
+    $count = count($cleaned_posts);
     if ($settings['cleanup_email'] && !empty($cleaned_posts)) {
-        $subject = sprintf('[%s] %d expired notice(s) cleaned up', get_bloginfo('name'), count($cleaned_posts));
+        $subject = sprintf(
+            '[%s] %d expired %s cleaned up',
+            get_bloginfo('name'),
+            $count,
+            $count === 1 ? 'notice' : 'notices'
+        );
         $message = sprintf(
-            '<p>The following posts have been archived by the Advanced Notices Manager on <strong>%s</strong>:</p><ul>%s</ul><p>This is an automated message from the Advanced Notices Manager plugin.</p>',
+            '<p>The following %s been archived by the Notices Manager on <strong>%s</strong>:</p><ul>%s</ul><p>This is an automated message from the Advanced Notices Manager plugin.</p>',
+            $count === 1 ? 'post has' : 'posts have',
             get_bloginfo('name'),
             implode('', $cleaned_posts)
         );
