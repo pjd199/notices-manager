@@ -8,7 +8,7 @@ if (!defined('ABSPATH')) exit;
  * HELPER: Renders the internal content of a row.
  * Isolated so it can be called by the initial loop AND the AJAX refresh.
  */
-function anm_render_row_content($post_id, $cat_slug, $categories) {
+function anm_render_row_content($post_id, $cat_slug, $categories, $is_events = false) {
     $settings = anm_get_settings();
     $post = get_post($post_id);
     if (!$post) return '';
@@ -73,6 +73,9 @@ function anm_render_row_content($post_id, $cat_slug, $categories) {
     $tag_labels = $settings['tags'];
 
     ob_start(); ?>
+    <?php if (!$is_events) : ?>
+        <td class="anm-drag-handle" title="Drag to reorder" style="width:5px; text-align:center; cursor:grab; color:#999; font-size:18px; user-select:none;">⠿</td>
+    <?php endif; ?>
     <td class="column-title has-row-actions" data-modified="<?php echo $modified; ?>" data-bg="<?php echo $row_bg; ?>">
         <strong style="display: inline-block;">
             <a class="row-title" href="<?=get_edit_post_link($post_id)?>"><?=esc_html($post->post_title)?></a>
@@ -121,6 +124,11 @@ function anm_render_page() {
     <style>
         .anm-wrap ~ .litespeed_icon.notice-success, .litespeed_icon.notice-success { display: none !important; }
         .anm-row { transition: background-color 0.4s ease; }
+        .anm-drag-handle { cursor: grab; }
+        .anm-drag-handle:active { cursor: grabbing; }
+        .anm-row.ui-sortable-helper { box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0.95; }
+        .anm-row.ui-sortable-placeholder { background: #e5f3ff !important; border: 2px dashed #72aee6 !important; visibility: visible !important; }
+        .anm-drag-handle.saved { color: #00a32a !important; transition: color 0.2s ease; }
     </style>
     <div class="anm-wrap">
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px;">
@@ -139,10 +147,12 @@ function anm_render_page() {
         $cat_obj = get_category_by_slug($cat_slug);
         if (!$cat_obj) continue;
 
+        $is_events = ($cat_slug === 'events');
+
         $cat_specific_tags = [];
         foreach ($settings['suffixes'] as $sfx) { $cat_specific_tags[] = $cat_slug . $sfx; }
 
-        if ( $cat_slug === 'events' ) {
+        if ( $is_events ) {
             // Posts with event_start_time - ordered by date ASC
             $args = [
                 'post_type'      => 'post',
@@ -184,8 +194,8 @@ function anm_render_page() {
                 'post_status'    => [ 'publish', 'pending', 'draft', 'future', 'private' ],
                 'category_name'  => $cat_slug,
                 'tax_query'      => [ [ 'taxonomy' => 'post_tag', 'field' => 'slug', 'terms' => $cat_specific_tags ] ],
-                'orderby'        => 'date',
-                'order'          => 'DESC',
+                'orderby'        => 'menu_order',
+                'order'          => 'ASC',
             ];
             $query = new \WP_Query( $args );
             $undated_query = null;
@@ -198,19 +208,31 @@ function anm_render_page() {
         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px;">
             <h2><?=esc_html($cat_obj->name)?><span class="count" style="font-weight:normal; color:#666;">(<?=$total_count?>)</span></h2>
             <a href="<?=$new_post_url?>" class="button action">Add New Post</a>
+
+            <?php if ( !$is_events && $total_count > 1 ) : ?>
+                <button type="button" 
+                    class="button button-secondary anm-reset-cat" 
+                    data-cat="<?php echo esc_html($cat_slug); ?>">
+                    Reset Order
+                </button>
+                <span class="spinner"></span>
+            <?php endif; ?>
         </div>
         <table class="wp-list-table widefat fixed striped posts" style="margin-bottom: 40px;">
             <thead>
                 <tr>
-                    <th style="width: 25%;">Title</th>
-                    <th style="width: 120px;"><?= ($cat_slug === 'events') ? "Event Date" : "Expiry Date" ?></th>
-                    <th style="width: 120px;">Published</th>
-                    <th style="width: 70px; text-align:center;">Image</th>
-                    <th style="width: 70px; text-align:center;">Excerpt</th>
-                    <th style="width: 180px;">Display Style</th>
+                    <?php if ( ! $is_events ) : ?>
+                        <th style="width:5px;"></th>
+                    <?php endif; ?>
+                    <th style="width: 40%;">Title</th>
+                    <th style="width: 100px;"><?= $is_events ? "Event Date" : "Expiry Date" ?></th>
+                    <th style="width: 100px;">Published</th>
+                    <th style="width: 60px; text-align:center;">Image</th>
+                    <th style="width: 60px; text-align:center;">Excerpt</th>
+                    <th style="width: 160px;">Display Style</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody <?= ! $is_events ? 'class="anm-sortable" data-catslug="' . esc_attr($cat_slug) . '"' : '' ?>>
                 <?php 
                 $has_posts = false;
 
@@ -219,7 +241,7 @@ function anm_render_page() {
                     while ( $undated_query->have_posts() ) : $undated_query->the_post();
                         $has_posts = true;
                         $pid     = get_the_ID();
-                        $content = anm_render_row_content( $pid, $cat_slug, $settings['categories'] );
+                        $content = anm_render_row_content( $pid, $cat_slug, $settings['categories'], $is_events);
                         preg_match( '/data-bg="([^"]*)"/', $content, $m );
                         $bg_style = "background-color:#fff3cd;"; // Yellow to highlight missing date
                         ?>
@@ -229,11 +251,11 @@ function anm_render_page() {
                     <?php endwhile; wp_reset_postdata();
                 endif;
 
-                // Dated events
+                // Dated events (or all non-event posts)
                 if ( $query->have_posts() ) : while ( $query->have_posts() ) : $query->the_post();
                     $has_posts = true;
                     $pid     = get_the_ID();
-                    $content = anm_render_row_content( $pid, $cat_slug, $settings['categories'] );
+                    $content = anm_render_row_content( $pid, $cat_slug, $settings['categories'], $is_events);
                     preg_match( '/data-bg="([^"]*)"/', $content, $m );
                     $bg_style = ! empty( $m[1] ) ? "background-color:{$m[1]};" : "";
                     ?>
@@ -243,7 +265,7 @@ function anm_render_page() {
                 <?php endwhile; wp_reset_postdata(); endif;
 
                 if ( ! $has_posts ) : ?>
-                    <tr><td colspan="6">No posts found.</td></tr>
+                    <tr><td colspan="<?= $is_events ? 6 : 7 ?>">No posts found.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -252,26 +274,96 @@ function anm_render_page() {
 
     <script>
     jQuery(document).ready(function($) {
+
+        // ── Drag-and-drop ordering ─────────────────────────────────────────────
+        $('.anm-sortable').sortable({
+            items:       '> tr.anm-row',
+            handle:      '.anm-drag-handle',
+            axis:        'y',
+            placeholder: 'anm-row ui-sortable-placeholder',
+            // Keep the placeholder the same height as the dragged row
+            start: function(e, ui) {
+                ui.placeholder.height(ui.item.outerHeight());
+                // Force the helper to maintain its column widths
+                ui.helper.find('td').each(function() {
+                    $(this).width($(this).width());
+                });
+            },
+            stop: function(e, ui) {
+                var $tbody   = $(this);
+                var catSlug  = $tbody.data('catslug');
+
+                // Collect ordered post IDs from this tbody
+                var ordered = [];
+                $tbody.find('tr.anm-row').each(function() {
+                    ordered.push($(this).data('postid'));
+                });
+
+                // Save via AJAX
+                $.post(ajaxurl, {
+                    action:   'anm_save_order',
+                    nonce:    '<?php echo wp_create_nonce("anm_nonce"); ?>',
+                    post_ids: ordered,
+                    cat_slug: catSlug
+                }, function(res) {
+                    if (res.success) {
+                        // Flash all drag handles in this tbody green briefly
+                        var $handles = $tbody.find('.anm-drag-handle');
+                        $handles.addClass('saved');
+                        setTimeout(function() { $handles.removeClass('saved'); }, 1200);
+                    } else {
+                        alert('Order save failed. Please try again.');
+                    }
+                });
+            }
+        });
+
+        jQuery(document).ready(function($) {
+            $('.anm-reset-cat').on('click', function() {
+                const $button = $(this);
+                const catSlug = $button.data('cat');
+                const $spinner = $button.next('.spinner');
+
+                if (!confirm(`Reset order for ${catSlug} by date?`)) return;
+
+                $button.prop('disabled', true);
+                $spinner.addClass('is-active');
+
+                $.post(ajaxurl, {
+                    action: 'anm_reset_category_order',
+                    category: catSlug
+                }, function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert(response.data);
+                        $button.prop('disabled', false);
+                        $spinner.removeClass('is-active');
+                    }
+                });
+            });
+        });
+
+        // ── Sync check (tab focus) ─────────────────────────────────────────────
         function checkForUpdates() {
             var postData = [];
             $('.anm-row').each(function() {
                 var $row = $(this);
                 postData.push({
-                    id: $row.data('postid'),
-                    cat: $row.data('catslug'),
+                    id:       $row.data('postid'),
+                    cat:      $row.data('catslug'),
                     modified: $row.find('.column-title').data('modified')
                 });
             });
 
             $.post(ajaxurl, {
                 action: 'anm_sync_check',
-                nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>',
-                posts: postData
+                nonce:  '<?php echo wp_create_nonce("anm_nonce"); ?>',
+                posts:  postData
             }, function(res) {
                 if (res.success && res.data.updates) {
                     res.data.updates.forEach(function(u) {
                         var $row = $('#post-row-' + u.id);
-                        // Swap HTML content and update background color smoothly
                         $row.html(u.html);
                         var newBg = $row.find('.column-title').data('bg');
                         $row.css('background-color', newBg ? newBg : '');
@@ -280,12 +372,11 @@ function anm_render_page() {
             });
         }
 
-        // Trigger update when user returns to the tab
         $(window).on('focus', function() {
             checkForUpdates();
         });
 
-        // Delegate events so they work after row HTML is replaced
+        // ── Delegated row actions ──────────────────────────────────────────────
         $(document).on('click', '.anm-panel-trigger', function(e){ 
             e.preventDefault(); 
             $(this).closest('td').find('.anm-panel').slideDown(100); 
@@ -319,11 +410,11 @@ function anm_render_page() {
             var $select = $(this), $spinner = $select.next('.spinner');
             $spinner.addClass('is-active');
             $.post(ajaxurl, { 
-                action: 'anm_update_tag', 
-                post_id: $select.data('postid'), 
-                tag: $select.val(), 
+                action:   'anm_update_tag', 
+                post_id:  $select.data('postid'), 
+                tag:      $select.val(), 
                 cat_slug: $select.data('catslug'), 
-                nonce: '<?=wp_create_nonce("anm_nonce")?>' 
+                nonce:    '<?=wp_create_nonce("anm_nonce")?>' 
             }, function(res) { 
                 $spinner.removeClass('is-active');
                 if(!res.success) alert('Save failed');
@@ -336,19 +427,18 @@ function anm_render_page() {
             var btn = $(this), pid = btn.data('postid');
             btn.css('opacity', '0.5');
             $.post(ajaxurl, { 
-                action: 'anm_publish_post', 
+                action:  'anm_publish_post', 
                 post_id: pid, 
-                nonce: '<?=wp_create_nonce("anm_nonce")?>' 
+                nonce:   '<?=wp_create_nonce("anm_nonce")?>' 
             }, function(res) { 
                 if(res.success) {
-                    // Refresh the row so the publish button disappears and status updates
                     $.post(ajaxurl, {
                         action: 'anm_sync_check',
-                        nonce: '<?php echo wp_create_nonce("anm_nonce"); ?>',
-                        posts: [{ id: pid, cat: $('#post-row-' + pid).data('catslug'), modified: '' }]
+                        nonce:  '<?php echo wp_create_nonce("anm_nonce"); ?>',
+                        posts:  [{ id: pid, cat: $('#post-row-' + pid).data('catslug'), modified: '' }]
                     }, function(res) {
                         if(res.success && res.data.updates.length) {
-                            var u = res.data.updates[0];
+                            var u    = res.data.updates[0];
                             var $row = $('#post-row-' + u.id);
                             $row.html(u.html);
                             var newBg = $row.find('.column-title').data('bg');
@@ -364,6 +454,92 @@ function anm_render_page() {
 }
 
 
+// ── AJAX: Save drag-and-drop order ────────────────────────────────────────────
+add_action('wp_ajax_anm_save_order', function() {
+    check_ajax_referer('anm_nonce', 'nonce');
+
+    $post_ids = isset($_POST['post_ids']) ? array_map('intval', (array) $_POST['post_ids']) : [];
+
+    if (empty($post_ids)) {
+        wp_send_json_error('No post IDs provided.');
+    }
+
+    foreach ($post_ids as $index => $post_id) {
+        error_log($post_id);
+        if (!current_user_can('edit_post', $post_id)) {
+            wp_send_json_error('Permission denied.');
+        }
+        wp_update_post([
+            'ID'         => $post_id,
+            'menu_order' => ($index + 1) * 10,
+        ]);
+    }
+
+    wp_send_json_success();
+});
+
+add_action('wp_ajax_anm_reset_category_order', function() {
+    if (!current_user_can('edit_posts')) {
+        wp_send_json_error('Unauthorized');
+    }
+
+    $cat_slug = isset($_POST['category']) ? sanitize_text_field($_POST['category']) : '';
+    $settings = anm_get_settings();
+
+    if (empty($cat_slug) || $cat_slug === 'events') {
+        wp_send_json_error('Invalid category or category protected from reset.');
+    }
+
+    // 1. Get all posts for this category
+    $posts = get_posts([
+        'category_name'  => $cat_slug,
+        'posts_per_page' => -1,
+        'post_status'    => 'publish',
+    ]);
+
+    if (empty($posts)) {
+        wp_send_json_success("No posts found to reset.");
+    }
+
+    // 2. Sort posts: Suffix Priority first, then Date
+    usort($posts, function($a, $b) use ($cat_slug, $settings) {
+        $suffixes = $settings['suffixes']; // e.g., ['-full', '-short']
+        
+        // Find which suffix each post has
+        $get_suffix_priority = function($post_id) use ($cat_slug, $suffixes) {
+            $post_tags = wp_get_post_terms($post_id, 'post_tag', ['fields' => 'slugs']);
+            foreach ($suffixes as $index => $suffix) {
+                if (in_array($cat_slug . $suffix, $post_tags)) {
+                    return $index; // Return the position in the suffixes array as priority
+                }
+            }
+            return 999; // No matching suffix found
+        };
+
+        $priority_a = $get_suffix_priority($a->ID);
+        $priority_b = $get_suffix_priority($b->ID);
+
+        // If priorities differ, sort by display style (suffix index)
+        if ($priority_a !== $priority_b) {
+            return $priority_a - $priority_b;
+        }
+
+        // If priorities are the same, sort by date DESC (newest first)
+        return strtotime($b->post_date) - strtotime($a->post_date);
+    });
+
+    // 3. Save the new order
+    foreach ($posts as $index => $post_obj) {
+        wp_update_post([
+            'ID'         => $post_obj->ID,
+            'menu_order' => $index + 1
+        ]);
+    }
+
+    wp_send_json_success("Order for $cat_slug reset by display style and date.");
+});
+
+// ── AJAX: Sync check ──────────────────────────────────────────────────────────
 add_action('wp_ajax_anm_sync_check', function() {
     check_ajax_referer('anm_nonce', 'nonce');
     $incoming = $_POST['posts'] ?? [];
@@ -373,10 +549,12 @@ add_action('wp_ajax_anm_sync_check', function() {
     foreach ($incoming as $item) {
         $pid = intval($item['id']);
         $post = get_post($pid);
+        $cat_slug = sanitize_text_field($item['cat']);
+        $is_events = ($cat_slug === 'events');
         if ($post && $post->post_modified !== $item['modified']) {
             $updates[] = [
-                'id' => $pid,
-                'html' => anm_render_row_content($pid, sanitize_text_field($item['cat']), $settings['categories'])
+                'id'   => $pid,
+                'html' => anm_render_row_content($pid, $cat_slug, $settings['categories'], $is_events)
             ];
         }
     }

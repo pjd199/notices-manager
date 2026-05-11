@@ -19,26 +19,34 @@ function organize_post_data($all_posts) {
             }
         }
     }
+    
     $data = array_filter($data, fn($posts) => !empty($posts));
 
-    // Sort each group individually, with date sorting for events
+    // Sort each group individually
     foreach ($data as $cat => &$posts) {
         if ($cat === 'events') {
             usort($posts, function($a, $b) {
                 $date_a = get_post_meta($a->ID, 'event_start_time', true);
                 $date_b = get_post_meta($b->ID, 'event_start_time', true);
         
-                // If both are missing, sort by title as a fallback
                 if (empty($date_a) && empty($date_b)) {
                     return strcmp($a->post_title, $b->post_title);
                 }
         
-                // If only one is missing, push the missing one to the end
                 if (empty($date_a)) return 1;
                 if (empty($date_b)) return -1;
         
-                // Both have dates, sort normally
                 return strcmp($date_a, $date_b);
+            });
+        } else {
+            // Sort by menu_order, fallback to post_date
+            usort($posts, function($a, $b) {
+                if ($a->menu_order == $b->menu_order) {
+                    // If menu_order is the same, newest date first (DESC)
+                    return strtotime($b->post_date) - strtotime($a->post_date);
+                }
+                // Lower menu_order values first (ASC)
+                return ($a->menu_order < $b->menu_order) ? -1 : 1;
             });
         }
     }
@@ -68,6 +76,8 @@ function plain_text_notices($year, $month, $day, $toc = true) {
             'post__in'       => explode(',', $archive->post_ids),
             'posts_per_page' => -1,
             'post_status'    => 'publish',
+            'orderby'        => 'menu_order date', // Ensure we fetch with order initially
+            'order'          => 'ASC'
         ]);
     } else {
         list($year, $month, $day) = explode('-', date('Y-m-d'));

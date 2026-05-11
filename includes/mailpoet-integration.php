@@ -35,8 +35,8 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
         $args['meta_type'] = 'DATETIME';
         $args['order'] = 'ASC'; 
     } else { 
-        $args['orderby'] = 'date'; 
-        $args['order'] = 'DESC'; 
+        $args['orderby'] = 'menu_order date'; // Sorts by menu order first, then date
+        $args['order'] = 'ASC';
     }
 
     if (!empty($tags_arg)) $args['tag_slug__in'] = array_map('trim', $tags_arg);
@@ -156,8 +156,8 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
         $args['meta_type'] = 'DATETIME'; 
         $args['order'] = 'ASC'; 
     } else { 
-        $args['orderby'] = 'date'; 
-        $args['order'] = 'DESC'; 
+        $args['orderby'] = 'menu_order date'; // Sorts by menu order first, then date
+        $args['order'] = 'ASC';
     }
 
     if (!empty($tags_arg)) $args['tag_slug__in'] = array_map('trim', $tags_arg);
@@ -343,8 +343,8 @@ add_filter('mailpoet_newsletter_shortcode', function($shortcode, $newsletter, $s
         $args['meta_type'] = 'DATETIME';
         $args['order'] = 'ASC';
     } else {
-        $args['orderby'] = 'date';
-        $args['order'] = 'DESC';
+        $args['orderby'] = 'menu_order date'; // Sorts by menu order first, then date
+        $args['order'] = 'ASC';
     }
 
     if (!empty($tags_arg)) $args['tag_slug__in'] = array_map('trim', $tags_arg);
