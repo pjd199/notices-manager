@@ -473,8 +473,8 @@ add_action('wp_ajax_anm_save_order', function() {
             'ID'         => $post_id,
             'menu_order' => ($index + 1) * 10,
         ]);
+        anm_purge_notice_caches($post_id);
     }
-
     wp_send_json_success();
 });
 
@@ -534,6 +534,7 @@ add_action('wp_ajax_anm_reset_category_order', function() {
             'ID'         => $post_obj->ID,
             'menu_order' => $index + 1
         ]);
+        anm_purge_notice_caches($post_id);
     }
 
     wp_send_json_success("Order for $cat_slug reset by display style and date.");
