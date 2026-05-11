@@ -204,20 +204,31 @@ function anm_render_page() {
         $default_tag = $cat_slug .'-' . $settings['default_tag'];
         $new_post_url = admin_url("post-new.php?pre_cat={$cat_obj->term_id}&pre_tag={$default_tag}");
         ?>
-        
-        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px;">
-            <h2><?=esc_html($cat_obj->name)?><span class="count" style="font-weight:normal; color:#666;">(<?=$total_count?>)</span></h2>
-            <a href="<?=$new_post_url?>" class="button action">Add New Post</a>
 
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
+            <!-- Left Side Group -->
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <h2>
+                    <?=esc_html($cat_obj->name)?>
+                    <span class="count" style="font-weight:normal; color:#666;">(<?=$total_count?>)</span>
+                </h2>
+                <a href="<?=$new_post_url?>" class="button action">Add New Post</a>
+            </div>
+
+            <!-- Right Side Group -->
             <?php if ( !$is_events && $total_count > 1 ) : ?>
-                <button type="button" 
-                    class="button button-secondary anm-reset-cat" 
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <a href="#" 
+                    class="anm-reset-cat" 
+                    style="text-decoration: none;"
                     data-cat="<?php echo esc_html($cat_slug); ?>">
-                    Reset Order
-                </button>
-                <span class="spinner"></span>
+                    Reset <?=esc_html($cat_obj->name)?> order
+                    </a>
+                    <span class="spinner"></span>
+                </div>
             <?php endif; ?>
         </div>
+
         <table class="wp-list-table widefat fixed striped posts" style="margin-bottom: 40px;">
             <thead>
                 <tr>
