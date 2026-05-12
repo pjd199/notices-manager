@@ -8,11 +8,10 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
     if (strpos($shortcode, '[custom:download_plain_text') !== 0) return $shortcode;
 
     $date_args = '&year=' . date('Y') . '&month=' . date('m') . '&day=' . date('d');
-    return '<div><p>Also available in text only versions:
+    return 'Also available in text only versions:
                 <a href="' . home_url('/?plain_text=html&toc=false') . $date_args . '" target="_blank">online</a>, 
                 <a href="' . home_url('/?plain_text=pdf') . $date_args . '" target="_blank">PDF</a>, 
-                <a href="' . home_url('/?plain_text=docx') . $date_args . '" target="_blank">DOCX</a>
-            </p></div>';
+                <a href="' . home_url('/?plain_text=docx') . $date_args . '" target="_blank">DOCX</a>';
 }, 10, 6);
 
 add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $subscriber, $queue, $newsletter_body, $arguments) {
@@ -81,7 +80,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
         $output .= '
         <tr>
             <td style="padding-bottom:30px;">
-                <table style="width=100%;">';
+                <table style="width: 100%;">';
 
         if ($show_image && $thumbnail_url) {
             $output .= '                
@@ -267,7 +266,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
                     <td style="font-size:0; text-align:center;" align="center" valign="top">
 <![endif]-->
                         <div style="display:inline-block; vertical-align:top; width:100%; max-width:300px;">
-                            <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="width: 100%;" dir=”ltr”>
+                            <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="width: 100%;" dir="ltr">
                                 <tr>
                                     <td align="left" valign="top" style="padding: 0px; margin: 0px;">
                                         <a href="'.esc_url($permalink).'" target="_blank" style="display: block; border: 0; text-decoration: none;">
@@ -282,7 +281,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
                     <td valign="top" style="width:300px;">
 <![endif]-->
                         <div style="display:inline-block; vertical-align:top; width:100%; max-width:300px;">
-                            <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;" dir=”ltr”>
+                            <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;" dir="ltr">
                                 <tr>
                                     <td align="left" valign="top" style="padding-left:10px; padding-right:10px">
                                         <a href="'.esc_url($permalink).'" style="text-decoration:none; color:#333333;">
@@ -319,7 +318,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
         <td style="width: 600px;">
             <hr style="border: 0; border-top: 2px solid #eeeeee; margin: 0;">
         </td>
-    <tr>
+    </tr>
 </table>';
 	}
     wp_reset_postdata();
