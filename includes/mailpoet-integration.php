@@ -93,7 +93,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
         $output .= '
                     <tr>
                         <td style="padding-left:10px; padding-right:10px; font-family:Arial, sans-serif">
-                            <span style="font-size:22px; font-weight:bold; line-height: 28px;">'.get_the_title().'</span>
+                            <span style="font-size:22px; font-weight:bold; line-height: 28px;">'.get_the_title().'</span>';
                 
         if ($is_event_query && !empty($formatted_date)) {
             $output .= '
