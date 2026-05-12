@@ -86,9 +86,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
             $output .= '                
                     <tr>
                         <td>
-                            <a href="'.esc_url($permalink).'" target="_blank">
-                                <img src="'.esc_url($thumbnail_url).'" alt="' . $thumbnail_alt_text . '" width="600" style="width:100%;margin-bottom:10px">
-                            </a>
+                            <img src="'.esc_url($thumbnail_url).'" alt="' . $thumbnail_alt_text . '" width="600" style="width:100%;margin-bottom:10px">
                         </td>
                     </tr>';
         }
@@ -213,9 +211,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
                             <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="width: 100%;">
                                 <tr>
                                     <td align="left" valign="top" style="padding: 0px; margin: 0px;">
-                                        <a href="'.esc_url($permalink).'" target="_blank" style="display: block; border: 0; text-decoration: none;">
-                                            <img src="'.esc_url($thumbnail_url).'" width="300" alt="' . $thumbnail_alt_text .'" style="display:block; width:100%; min-width:100%; height:auto;margin-bottom:10px" />
-                                        </a>
+                                        <img src="'.esc_url($thumbnail_url).'" width="300" alt="' . $thumbnail_alt_text .'" style="display:block; width:100%; min-width:100%; height:auto;margin-bottom:10px" />
                                     </td>
                                 </tr>
                             </table>
@@ -269,9 +265,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
                             <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="width: 100%;" dir="ltr">
                                 <tr>
                                     <td align="left" valign="top" style="padding: 0px; margin: 0px;">
-                                        <a href="'.esc_url($permalink).'" target="_blank" style="display: block; border: 0; text-decoration: none;">
-                                            <img src="'.esc_url($thumbnail_url).'" width="300" alt="' . $thumbnail_alt_text . '" style="display:block; width:100%; min-width:100%; height:auto;margin-bottom:10px" />
-                                        </a>
+                                        <img src="'.esc_url($thumbnail_url).'" width="300" alt="' . $thumbnail_alt_text . '" style="display:block; width:100%; min-width:100%; height:auto;margin-bottom:10px" />
                                     </td> 
                                 </tr>
                             </table>
@@ -389,9 +383,7 @@ add_filter('mailpoet_newsletter_shortcode', function($shortcode, $newsletter, $s
             <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #ffffff; border: 1px solid #eeeeee; border-collapse: collapse; mso-table-lspace:0pt; mso-table-rspace:0pt;">
                 <tr>
                     <td valign="top" align="left" style="padding: 0; margin: 0; line-height: 10px; font-size: 10px;">
-                        <a href="' . esc_url($permalink) . '" target="_blank" style="display: block; border: 0;">
-                            <img src="' . esc_url($thumbnail_url) . '" alt="' . $thumbnail_alt_text . '" width="292" border="0" style="display: block; width: 100%; height: auto; border: 0;">
-                        </a>
+                        <img src="' . esc_url($thumbnail_url) . '" alt="' . $thumbnail_alt_text . '" width="292" border="0" style="display: block; width: 100%; height: auto; border: 0;">
                     </td>
                 </tr>
                 <tr>
