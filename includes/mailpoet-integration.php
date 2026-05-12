@@ -224,9 +224,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
                             <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;">
                                 <tr>
                                     <td align="left" valign="top" style="padding-left:10px; padding-right:10px">
-                                        <a href="'.esc_url($permalink).'" style="text-decoration:none; color:#333333;">
-                                            <span style="font-size:22px; font-weight:bold; line-height: 28px;">'.get_the_title().'</span>
-                                        </a>';
+                                            <span style="font-size:22px; font-weight:bold; line-height: 28px;">'.get_the_title().'</span>';
             
                 if ($is_event_query && !empty($formatted_date)) {
                     $output .= '
@@ -278,9 +276,8 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
                             <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;" dir="ltr">
                                 <tr>
                                     <td align="left" valign="top" style="padding-left:10px; padding-right:10px">
-                                        <a href="'.esc_url($permalink).'" style="text-decoration:none; color:#333333;">
-                                            <span style="font-size:22px; font-weight:bold; line-height: 28px;">'.get_the_title().'</span>
-                                        </a>';
+                                        <span style="font-size:22px; font-weight:bold; line-height: 28px;">'.get_the_title().'</span>';
+
                 if ($is_event_query && !empty($formatted_date)) {
                     $output .= '
                                         <div style="line-height:8px; font-size:8px;">&nbsp;</div>
