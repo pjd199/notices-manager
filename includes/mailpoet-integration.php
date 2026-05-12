@@ -476,7 +476,13 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
 
     while ($query->have_posts()) {
         $query->the_post();
-        $output .= '<li style="margin-bottom: 5px;">' . get_the_title() . '</li>';
+        $event_raw = get_post_meta(get_the_ID(), 'event_start_time', true);
+        if ($event_raw) {
+            $timestamp = strtotime($event_raw);
+            $output .= '<li style="margin-bottom: 5px;">' . get_the_title() . ' on ' . date('jS F', $timestamp) . '</li>';
+        } else {
+            $output .= '<li style="margin-bottom: 5px;">' . get_the_title() . '</li>';
+        }
     }
 
     $output .= '</ul>';
