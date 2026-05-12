@@ -51,7 +51,8 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
     while ($query->have_posts()) {
         $query->the_post();
         $permalink = get_permalink();
-        $thumbnail = get_the_post_thumbnail_url(get_the_ID(), 'medium_large');
+        $thumbnail_url = get_the_post_thumbnail_url(get_the_ID(), 'medium_large');
+        $thumbnail_alt_text = get_thumbnail_alt_text(get_the_ID());
         
         $post_tags = get_the_tags();
         $has_short_tag = false;
@@ -82,12 +83,12 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
             <td style="padding-bottom:30px;">
                 <table style="width=100%;">';
 
-        if ($show_image && $thumbnail) {
+        if ($show_image && $thumbnail_url) {
             $output .= '                
                     <tr>
                         <td>
                             <a href="'.esc_url($permalink).'" target="_blank">
-                                <img src="'.esc_url($thumbnail).'" width="600" style="width:100%;margin-bottom:10px">
+                                <img src="'.esc_url($thumbnail_url).'" width="600" style="width:100%;margin-bottom:10px">
                             </a>
                         </td>
                     </tr>';
@@ -171,7 +172,8 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
     while ($query->have_posts()) {
         $query->the_post();
         $permalink = get_permalink();
-        $thumbnail = get_the_post_thumbnail_url(get_the_ID(), 'medium_large');
+        $thumbnail_url = get_the_post_thumbnail_url(get_the_ID(), 'medium_large');
+        $thumbnail_alt_text = get_thumbnail_alt_text(get_the_ID());
         
         $post_tags = get_the_tags();
         $has_short_tag = false;
@@ -213,7 +215,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
                                 <tr>
                                     <td align="left" valign="top" style="padding: 0px; margin: 0px;">
                                         <a href="'.esc_url($permalink).'" target="_blank" style="display: block; border: 0; text-decoration: none;">
-                                            <img src="'.esc_url($thumbnail).'" width="300" alt="" style="display:block; width:100%; min-width:100%; height:auto;margin-bottom:10px" />
+                                            <img src="'.esc_url($thumbnail_url).'" width="300" alt="' . $thumbnail_alt_text .'" style="display:block; width:100%; min-width:100%; height:auto;margin-bottom:10px" />
                                         </a>
                                     </td>
                                 </tr>
@@ -269,7 +271,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
                                 <tr>
                                     <td align="left" valign="top" style="padding: 0px; margin: 0px;">
                                         <a href="'.esc_url($permalink).'" target="_blank" style="display: block; border: 0; text-decoration: none;">
-                                            <img src="'.esc_url($thumbnail).'" width="300" alt="" style="display:block; width:100%; min-width:100%; height:auto;margin-bottom:10px" />
+                                            <img src="'.esc_url($thumbnail_url).'" width="300" alt="' . $thumbnail_alt_text . '" style="display:block; width:100%; min-width:100%; height:auto;margin-bottom:10px" />
                                         </a>
                                     </td> 
                                 </tr>
@@ -374,7 +376,8 @@ add_filter('mailpoet_newsletter_shortcode', function($shortcode, $newsletter, $s
                 }
             }
             
-            $thumbnail = get_the_post_thumbnail_url(get_the_ID(), 'medium') ?: '';
+            $thumbnail_url = get_the_post_thumbnail_url(get_the_ID(), 'medium') ?: '';
+            $thumbnail_alt_text = get_thumbnail_alt_text(get_the_ID());
 
             if ($query->current_post % 2 == 0) {
                 $output .= '
@@ -388,7 +391,7 @@ add_filter('mailpoet_newsletter_shortcode', function($shortcode, $newsletter, $s
                 <tr>
                     <td valign="top" align="left" style="padding: 0; margin: 0; line-height: 10px; font-size: 10px;">
                         <a href="' . esc_url($permalink) . '" target="_blank" style="display: block; border: 0;">
-                            <img src="' . esc_url($thumbnail) . '" alt="' . esc_attr(get_the_title()) . '" width="292" border="0" style="display: block; width: 100%; height: auto; border: 0;">
+                            <img src="' . esc_url($thumbnail_url) . '" alt="' . $thumbnail_alt_text . '" width="292" border="0" style="display: block; width: 100%; height: auto; border: 0;">
                         </a>
                     </td>
                 </tr>
@@ -439,3 +442,9 @@ add_filter('mailpoet_newsletter_shortcode', function($shortcode, $newsletter, $s
 </table>';
     return $output;
 }, 10, 6);
+
+function get_thumbnail_alt_text(int $post_id): string {
+    $attachment_id = get_post_thumbnail_id($post_id);
+    if (!$attachment_id) return '';
+    return esc_attr(get_post_meta($attachment_id, '_wp_attachment_image_alt', true));
+}
