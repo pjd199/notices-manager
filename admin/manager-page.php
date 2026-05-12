@@ -476,7 +476,6 @@ add_action('wp_ajax_anm_save_order', function() {
     }
 
     foreach ($post_ids as $index => $post_id) {
-        error_log($post_id);
         if (!current_user_can('edit_post', $post_id)) {
             wp_send_json_error('Permission denied.');
         }
