@@ -434,6 +434,54 @@ add_filter('mailpoet_newsletter_shortcode', function($shortcode, $newsletter, $s
     return $output;
 }, 10, 6);
 
+add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $subscriber, $queue, $newsletter_body, $arguments) {
+    if (strpos($shortcode, '[custom:post_titles_list') !== 0) return $shortcode;
+
+    $tags_arg       = isset($arguments['tags']) ? explode(',', $arguments['tags']) : [];
+    $cat_arg        = isset($arguments['categories']) ? explode(',', $arguments['categories']) : [];
+    $post_limit     = isset($arguments['limit']) ? intval($arguments['limit']) : 5;
+    $empty_msg      = isset($arguments['empty']) ? esc_html($arguments['empty']) : "";
+    $is_event_query = isset($arguments['event']) ? filter_var($arguments['event'], FILTER_VALIDATE_BOOLEAN) : false;
+
+    // Default arguments
+    $args = [
+        'post_type'      => 'post',
+        'posts_per_page' => $post_limit,
+        'post_status'    => 'publish',
+    ];
+
+    // Handle Conditional Sorting Logic
+    if ($is_event_query) {
+        $args['meta_key']  = 'event_start_time';
+        $args['orderby']   = 'meta_value';
+        $args['meta_type'] = 'DATETIME'; // Ensures chronological sorting
+        $args['order']     = 'ASC';      // Show nearest upcoming events first
+    } else {
+        // Sorts by Menu Order (Page Attributes) first, then by Date
+        $args['orderby'] = 'menu_order date'; 
+        $args['order']   = 'ASC';
+    }
+
+    if (!empty($tags_arg)) $args['tag_slug__in'] = array_map('trim', $tags_arg);
+    if (!empty($cat_arg))  $args['category_name'] = implode(',', array_map('trim', $cat_arg));
+
+    $query = new \WP_Query($args);
+
+    if (!$query->have_posts()) return $empty_msg;
+
+    $output = '<ul style="font-family: Arial, sans-serif; font-size: 16px; line-height: 24px; color: #333333;">';
+
+    while ($query->have_posts()) {
+        $query->the_post();
+        $output .= '<li style="margin-bottom: 5px;">' . get_the_title() . '</li>';
+    }
+
+    $output .= '</ul>';
+
+    wp_reset_postdata();
+    return $output;
+}, 10, 6);
+
 function get_thumbnail_alt_text(int $post_id): string {
     $attachment_id = get_post_thumbnail_id($post_id);
     if (!$attachment_id) return '';
