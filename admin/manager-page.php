@@ -219,10 +219,10 @@ function anm_render_page() {
             <?php if ( !$is_events && $total_count > 1 ) : ?>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <a href="#" 
-                    class="anm-reset-cat" 
+                    class="anm-default-cat-order" 
                     style="text-decoration: none;"
                     data-cat="<?php echo esc_html($cat_slug); ?>">
-                    Reset <?=esc_html($cat_obj->name)?> order
+                    Default <?=esc_html($cat_obj->name)?> order
                     </a>
                     <span class="spinner"></span>
                 </div>
@@ -330,12 +330,12 @@ function anm_render_page() {
         });
 
         jQuery(document).ready(function($) {
-            $('.anm-reset-cat').on('click', function() {
+            $('.anm-default-cat-order').on('click', function() {
                 const $button = $(this);
                 const catSlug = $button.data('cat');
                 const $spinner = $button.next('.spinner');
 
-                if (!confirm(`Reset order for ${catSlug} by date?`)) return;
+                if (!confirm(`Apply default post ordering for ${catSlug}? This will change the display order on the website.`)) return;
 
                 $button.prop('disabled', true);
                 $spinner.addClass('is-active');
