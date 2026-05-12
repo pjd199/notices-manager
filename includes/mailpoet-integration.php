@@ -88,7 +88,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
                     <tr>
                         <td>
                             <a href="'.esc_url($permalink).'" target="_blank">
-                                <img src="'.esc_url($thumbnail_url).'" width="600" style="width:100%;margin-bottom:10px">
+                                <img src="'.esc_url($thumbnail_url).'" alt="' . $thumbnail_alt_text . '" width="600" style="width:100%;margin-bottom:10px">
                             </a>
                         </td>
                     </tr>';
