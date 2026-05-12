@@ -193,7 +193,7 @@ function generate_alt_text_via_openai( string $file_path, string $mime_type, int
                         ],
                         [
                             'type' => 'text',
-                            'text' => 'Write a concise, descriptive alt text for this image in plain English. '
+                            'text' => 'Write a concise, descriptive alt text for this image in simple British English (UK)'
                                     . 'The alt text should describe what is visually present for a screen reader user. '
                                     . 'Do not start with "Image of" or "Picture of". '
                                     . 'Return only the alt text string — no punctuation at the end, no quotes, no extra commentary.'
