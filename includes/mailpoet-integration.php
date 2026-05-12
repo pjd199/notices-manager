@@ -93,9 +93,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
         $output .= '
                     <tr>
                         <td style="padding-left:10px; padding-right:10px; font-family:Arial, sans-serif">
-                            <a href="'.esc_url($permalink).'" style="text-decoration:none; color:#333333;">
-                                <span style="font-size:22px; font-weight:bold; line-height: 28px;">'.get_the_title().'</span>
-                            </a>';
+                            <span style="font-size:22px; font-weight:bold; line-height: 28px;">'.get_the_title().'</span>
                 
         if ($is_event_query && !empty($formatted_date)) {
             $output .= '
@@ -235,7 +233,11 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
                 $output .= '
                                         <div style="line-height:15px; font-size:15px;">&nbsp;</div>
                                         <div style="font-size:16px; line-height:24px; color:#444444; text-align:left;">'.$text.'</div>
-                                        <div style="text-align: right; width: 100%;"><a href="' . esc_url($permalink) . '" target="_blank" style="color: #0073aa; text-decoration: underline; font-size: 16px; font-weight: bold;"><span>'.$read_more.'</span></a></div>
+                                        <div style="text-align: right; width: 100%;">
+                                            <a href="' . esc_url($permalink) . '" target="_blank" style="color: #0073aa; text-decoration: underline; font-size: 16px; font-weight: bold;">
+                                                <span>'.$read_more.'</span>
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             </table>
@@ -287,7 +289,11 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
                 $output .= '
                                         <div style="line-height:15px; font-size:15px;">&nbsp;</div>
                                         <div style="font-size:16px; line-height:24px; color:#444444; text-align:left;">'.$text.'</div>
-                                        <div style="text-align: right; width: 100%;"><a href="' . esc_url($permalink) . '" target="_blank" style="color: #0073aa; text-decoration: underline; font-size: 16px; font-weight: bold;"><span>'.$read_more.'</span></a></div>
+                                        <div style="text-align: right; width: 100%;">
+                                            <a href="' . esc_url($permalink) . '" target="_blank" style="color: #0073aa; text-decoration: underline; font-size: 16px; font-weight: bold;">
+                                                <span>'.$read_more.'</span>
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             </table>
