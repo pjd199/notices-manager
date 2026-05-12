@@ -472,7 +472,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
 
     if (!$query->have_posts()) return $empty_msg;
 
-    $output = '<ul style="font-family: Arial, sans-serif; font-size: 16px; line-height: 24px; color: #333333;">';
+    $output = '<ul>';
 
     while ($query->have_posts()) {
         $query->the_post();
