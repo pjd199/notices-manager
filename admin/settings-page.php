@@ -41,6 +41,10 @@ function anm_sanitize_settings($input) {
     $sanitized['stale_days']    = absint($input['stale_days'] ?? 18);
     $sanitized['cleanup_cron']  = isset($input['cleanup_cron']) && $input['cleanup_cron'] == '1';
     $sanitized['cleanup_email'] = isset($input['cleanup_email']) && $input['cleanup_email'] == '1';
+    $sanitized['openai_api_key'] = isset($input['openai_api_key']) ? sanitize_text_field($input['openai_api_key']) : '';
+    $sanitized['ai_alt_text']   = isset($input['ai_alt_text']) && $input['ai_alt_text'] == '1';
+    
+    $input['default_tag'] ?? "short";
 
     // Sanitize Categories (Checkbox array from sortable list)
     $sanitized['categories'] = [];
@@ -157,6 +161,33 @@ function anm_render_settings_page() {
                     </td>
                 </tr>
 
+                <tr>
+                    <th>Open AI API Key</th>
+                    <td>
+                        <input type="password" name="anm_settings[openai_api_key]" id="anm_openai_api_key" value="<?php echo esc_attr($settings['openai_api_key']) ?>" class="regular-text anm-api-input">
+                            <button type="button"
+                                class="button anm-toggle-pw"
+                                style="display: inline-flex; align-items: center; justify-content: center; height: 30px; width: 30px; padding: 0;"
+                                title="Show/Hide Key">
+                                <span class="dashicons dashicons-visibility" style="margin: 0; line-height: 1;"></span>
+                            </button>
+                        <p class="description">API Key for OpenAI image resize.
+                            <a href="https://developers.openai.com/api/docs" target="_blank" style="text-decoration:none;">Get help with OpenAI API.</a>
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><label for="anm_ai_alt_text">AI alt text for images</label></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="anm_settings[ai_alt_text]" id="anm_ai_alt_text" value="1" <?= checked(true, (bool)($settings['ai_alt_text'] ?? false), false) ?>>
+                            Generate alt text for images using AI.
+                        </label>
+                        <p class="description">When enabled, use AI to automatically generate Alt Text for images uploaded to the media library.</p>
+                    </td>
+                </tr>
+
 
                 <tr>
                     <th scope="row" style="vertical-align: top;">Managed Categories</th>
@@ -228,30 +259,45 @@ function anm_render_settings_page() {
     </div>
 
     <script>
-    jQuery(document).ready(function($) {
-        // Fix: Enable Sortable Categories
-        $('#anm-cat-list').sortable({
-            axis: 'y',
-            cursor: 'move',
-            opacity: 0.7
-        });
+        jQuery(document).ready(function($) {
+            // Toggle Password Visibility
+            $('.anm-toggle-pw').on('click', function() {
+                const btn = $(this);
+                const input = btn.siblings('.anm-api-input');
+                const icon = btn.find('.dashicons');
 
-        // Fix: Add Tag Row Logic
-        $('#anm-add-tag-row').on('click', function() {
-            var row = '<tr>' +
-                '<td><input type="text" name="anm_settings[tag_keys][]" class="regular-text" style="width: 95%;"></td>' +
-                '<td><input type="text" name="anm_settings[tag_vals][]" class="regular-text" style="width: 95%;"></td>' +
-                '<td><a href="#" class="anm-remove-tag" style="color:#d63638; text-decoration:none; line-height:30px;"><span class="dashicons dashicons-no-alt"></span></a></td>' +
-                '</tr>';
-            $('#anm-tags-table tbody').append(row);
-        });
+                if (input.attr('type') === 'password') {
+                    input.attr('type', 'text');
+                    icon.removeClass('dashicons-visibility').addClass('dashicons-hidden');
+                } else {
+                    input.attr('type', 'password');
+                    icon.removeClass('dashicons-hidden').addClass('dashicons-visibility');
+                }
+            });
 
-        // Remove Tag Row
-        $(document).on('click', '.anm-remove-tag', function(e) {
-            e.preventDefault();
-            $(this).closest('tr').remove();
+            // Fix: Enable Sortable Categories
+            $('#anm-cat-list').sortable({
+                axis: 'y',
+                cursor: 'move',
+                opacity: 0.7
+            });
+
+            // Fix: Add Tag Row Logic
+            $('#anm-add-tag-row').on('click', function() {
+                var row = '<tr>' +
+                    '<td><input type="text" name="anm_settings[tag_keys][]" class="regular-text" style="width: 95%;"></td>' +
+                    '<td><input type="text" name="anm_settings[tag_vals][]" class="regular-text" style="width: 95%;"></td>' +
+                    '<td><a href="#" class="anm-remove-tag" style="color:#d63638; text-decoration:none; line-height:30px;"><span class="dashicons dashicons-no-alt"></span></a></td>' +
+                    '</tr>';
+                $('#anm-tags-table tbody').append(row);
+            });
+
+            // Remove Tag Row
+            $(document).on('click', '.anm-remove-tag', function(e) {
+                e.preventDefault();
+                $(this).closest('tr').remove();
+            });
         });
-    });
     </script>
     <?php
 }

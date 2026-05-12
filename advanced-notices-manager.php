@@ -25,17 +25,19 @@ function anm_get_settings() {
     
     if ($settings === null) {
         $defaults = [
-            'excerpt_min'   => 15,
-            'excerpt_max'   => 35,
-            'categories'    => ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'],
-            'tags'          => ['full' => 'Full post', 'short' => 'Excerpt', 'list' => 'Thumbnail', 'website' => 'Online only'],
-            'default_tag'   => 'short',
-            'img_w'         => 16,
-            'img_h'         => 9,
-            'new_days'      => 5,  
-            'stale_days'    => 18,
-            'cleanup_cron'  => true,
-            'cleanup_email' => true,
+            'excerpt_min'    => 15,
+            'excerpt_max'    => 35,
+            'categories'     => ['introduction', 'news', 'events', 'prayer', 'jobs', 'volunteering'],
+            'tags'           => ['full' => 'Full post', 'short' => 'Excerpt', 'list' => 'Thumbnail', 'website' => 'Online only'],
+            'default_tag'    => 'short',
+            'img_w'          => 16,
+            'img_h'          => 9,
+            'new_days'       => 5,  
+            'stale_days'     => 18,
+            'cleanup_cron'   => true,
+            'cleanup_email'  => true,
+            'openai_api_key' => '',
+            'ai_alt_text'   => false,
         ];
         $settings = wp_parse_args(get_option('anm_settings', []), $defaults);
         $settings['suffixes'] = array_map(fn($k) => "-$k", array_keys($settings['tags']));
@@ -49,6 +51,7 @@ if (file_exists(plugin_dir_path(ANM_MAIN_FILE) . 'vendor/autoload.php')) {
 }
 
 // include Sub-modules
+require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/ai-alt-text.php';
 require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/purge-cache.php';
 require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/scheduled-cleanup.php';
 require_once plugin_dir_path(ANM_MAIN_FILE) . 'includes/archive-snapshot.php';
