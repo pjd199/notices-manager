@@ -20,6 +20,16 @@ class HeadingToParagraphFilter extends \HTMLPurifier_Filter
     }
 }
 
+class StripWordPressBlockCommentsFilter extends \HTMLPurifier_Filter
+{
+    public $name = 'StripWordPressBlockComments';
+
+    public function preFilter($html, $config, $context)
+    {
+        return preg_replace('/<!--\s*\/?wp:[^>]*-->\s*/i', '', $html);
+    }
+}
+
 function get_html_purifier() {
     static $purifier = null;
     if ($purifier) {
@@ -30,7 +40,10 @@ function get_html_purifier() {
     $config = \HTMLPurifier_Config::createDefault();
 
     // Add custom filters
-    $config->set('Filter.Custom', [new HeadingToParagraphFilter()]);
+    $config->set('Filter.Custom', [
+        new HeadingToParagraphFilter(),
+        new StripWordPressBlockCommentsFilter(),
+    ]);
 
     // Only allow the elements you actually need
     $config->set('HTML.Allowed', 'p,br,strong,b,em,i,ul,ol,li,a[href],sup,sub,h1,h2,h3,h4,h5,h6');

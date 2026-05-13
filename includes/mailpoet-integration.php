@@ -45,6 +45,8 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
     
     if (!$query->have_posts()) return $empty;
 
+    $purifier = get_html_purifier();
+
     $output = '<table width="100%" style="width:100%; max-width:600px">';
 
     while ($query->have_posts()) {
@@ -64,7 +66,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
             }
         }
         
-        $text = $use_content ? get_the_content() : get_the_excerpt();
+        $text = $use_content ? $purifier->purify(get_the_content()) : get_the_excerpt();
         $text = trim($text);
 		
         $formatted_date = '';
@@ -92,7 +94,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
         }
         $output .= '
                     <tr>
-                        <td style="padding-left:10px; padding-right:10px; font-family:Arial, sans-serif">
+                        <td style="padding-left:10px; padding-right:10px;">
                             <span style="font-size:22px; font-weight:bold; line-height: 28px;">'.get_the_title().'</span>';
                 
         if ($is_event_query && !empty($formatted_date)) {
@@ -160,6 +162,8 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
     if (!empty($cat_arg)) $args['category_name'] = implode(',', array_map('trim', $cat_arg));
 
     $query = new \WP_Query($args);
+
+    $purifier = get_html_purifier();
     
     if (!$query->have_posts()) return $empty;    
 
@@ -181,7 +185,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
             }
         }
         
-        $text = $has_short_tag ? get_the_excerpt() : get_the_content();
+        $text = $has_short_tag ? get_the_excerpt() : $purifier->purify(get_the_content());
         $text = trim($text);
 		
         $formatted_date = '';
@@ -232,7 +236,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
 
                 $output .= '
                                         <div style="line-height:15px; font-size:15px;">&nbsp;</div>
-                                        <div style="font-size:16px; line-height:24px; color:#444444; text-align:left;">'.$text.'</div>
+                                        <div style="font-size:16px; line-height:24px; text-align:left;">'.$text.'</div>
                                         <div style="text-align: right; width: 100%;">
                                             <a href="' . esc_url($permalink) . '" target="_blank" style="color: #0073aa; text-decoration: underline; font-size: 16px; font-weight: bold;">
                                                 <span>'.$read_more.'</span>
@@ -288,7 +292,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
 
                 $output .= '
                                         <div style="line-height:15px; font-size:15px;">&nbsp;</div>
-                                        <div style="font-size:16px; line-height:24px; color:#444444; text-align:left;">'.$text.'</div>
+                                        <div style="font-size:16px; line-height:24px; text-align:left;">'.$text.'</div>
                                         <div style="text-align: right; width: 100%;">
                                             <a href="' . esc_url($permalink) . '" target="_blank" style="color: #0073aa; text-decoration: underline; font-size: 16px; font-weight: bold;">
                                                 <span>'.$read_more.'</span>
@@ -390,7 +394,7 @@ add_filter('mailpoet_newsletter_shortcode', function($shortcode, $newsletter, $s
                     </td>
                 </tr>
                 <tr>
-                    <td valign="top" style="padding: 10px; font-family: Arial, sans-serif; line-height: 1.2; mso-line-height-rule: exactly;">
+                    <td valign="top" style="padding: 10px; line-height: 1.2; mso-line-height-rule: exactly;">
                         <a href="' . esc_url($permalink) . '" target="_blank" style="text-decoration: none; color: #333333; display: block; border: 0;">
                             <span style="font-size: 14px; line-height: 16px; font-weight: bold; color: #333333; text-decoration: none;">' . get_the_title() . '</span>
                         </a>';
