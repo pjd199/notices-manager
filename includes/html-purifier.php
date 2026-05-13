@@ -30,6 +30,20 @@ class StripWordPressBlockCommentsFilter extends \HTMLPurifier_Filter
     }
 }
 
+class UnwrapBlockquoteFilter extends \HTMLPurifier_Filter
+{
+    public $name = 'UnwrapBlockquote';
+
+    public function postFilter($html, $config, $context)
+    {
+        // Remove opening blockquote tags (with any attributes)
+        $html = preg_replace('/<blockquote[^>]*>/i', '', $html);
+        // Remove closing blockquote tags
+        $html = preg_replace('/<\/blockquote>/i', '', $html);
+        return $html;
+    }
+}
+
 function get_html_purifier() {
     static $purifier = null;
     if ($purifier) {
@@ -43,10 +57,11 @@ function get_html_purifier() {
     $config->set('Filter.Custom', [
         new HeadingToParagraphFilter(),
         new StripWordPressBlockCommentsFilter(),
+        new UnwrapBlockquoteFilter(),
     ]);
 
     // Only allow the elements you actually need
-    $config->set('HTML.Allowed', 'p,br,strong,b,em,i,ul,ol,li,a[href],sup,sub,h1,h2,h3,h4,h5,h6');
+    $config->set('HTML.Allowed', 'p,br,strong,b,em,i,ul,ol,li,a[href],sup,sub,h1,h2,h3,h4,h5,h6,blockquote');
     $config->set('HTML.ForbiddenElements', ['img', 'style', 'script', 'iframe', 'video', 'audio', 'figure']);
 
     // Strip all inline styles and classes
