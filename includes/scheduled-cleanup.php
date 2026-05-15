@@ -92,12 +92,21 @@ add_action(ANM_EXPIRED_CLEANUP, function () {
         $query->the_post();
         $post_id = get_the_ID();
 
-        $expiry     = get_post_meta($post_id, 'expiry_date', true);
-        $start_time = get_post_meta($post_id, 'event_start_time', true);
-
         $meta_parts = [];
-        if ($expiry)     $meta_parts[] = 'expiry: ' . $expiry;
-        if ($start_time) $meta_parts[] = 'start time: ' . $start_time;
+
+        $expiry = get_post_meta($post_id, 'expiry_date', true);
+        if ($expiry) {
+            $t = new DateTime($expiry);
+            $meta_parts[] = 'Expires: ' . $t->format('M j Y');
+        }
+
+        $start_time = get_post_meta($post_id, 'event_start_time', true);
+        if ($start_time) {
+            // Format: May 13, 2026 at 8:12 AM
+            $t = new DateTime($start_time);
+            $meta_parts[] = 'Start Time: ' . $t->format('g:i A M j Y');
+        }
+
         $meta_str = $meta_parts ? ' (' . implode(', ', $meta_parts) . ')' : '';
 
         $cleaned_posts[] = sprintf(
