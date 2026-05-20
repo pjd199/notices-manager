@@ -44,6 +44,20 @@ class UnwrapBlockquoteFilter extends \HTMLPurifier_Filter
     }
 }
 
+class StripVideoEmbedsFilter extends \HTMLPurifier_Filter
+{
+    public $name = 'StripVideoEmbeds';
+
+    public function preFilter($html, $config, $context)
+    {
+        // Matches <figure> elements containing "is-provider-vimeo", "is-provider-youtube", 
+        // or "is-type-video" classes and strips them along with their inner contents.
+        $pattern = '/<figure[^>]*(is-provider-vimeo|is-provider-youtube|is-type-video)[^>]*>.*?<\/figure>/is';
+        
+        return preg_replace($pattern, '', $html);
+    }
+}
+
 function get_html_purifier() {
     static $purifier = null;
     if ($purifier) {
@@ -58,6 +72,7 @@ function get_html_purifier() {
         new HeadingToParagraphFilter(),
         new StripWordPressBlockCommentsFilter(),
         new UnwrapBlockquoteFilter(),
+        new StripVideoEmbedsFilter(),
     ]);
 
     // Only allow the elements you actually need
