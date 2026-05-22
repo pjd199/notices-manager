@@ -489,6 +489,8 @@ add_action('wp_ajax_anm_save_order', function() {
 });
 
 add_action('wp_ajax_anm_reset_category_order', function() {
+    check_ajax_referer('anm_nonce', 'nonce');
+    
     if (!current_user_can('edit_posts')) {
         wp_send_json_error('Unauthorized');
     }
