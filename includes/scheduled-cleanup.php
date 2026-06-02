@@ -12,8 +12,7 @@ define('ANM_EXPIRED_CLEANUP', 'anm_expired_cleanup');
 register_activation_hook(ANM_MAIN_FILE, function() {
     if (!wp_next_scheduled(ANM_EXPIRED_CLEANUP)) {
         // Calculate next 00:01 in site's local time
-        $timezone = wp_timezone();
-        $next_run = new \DateTime('today 00:15', $timezone);
+        $next_run = new \DateTime('today 00:15', wp_timezone());
         if ($next_run->getTimestamp() <= time()) {
             $next_run->modify('+1 day');
         }
@@ -96,14 +95,13 @@ add_action(ANM_EXPIRED_CLEANUP, function () {
 
         $expiry = get_post_meta($post_id, 'expiry_date', true);
         if ($expiry) {
-            $t = new DateTime($expiry);
+            $t = new \DateTime($expiry, wp_timezone());
             $meta_parts[] = 'Expires: ' . $t->format('M j Y');
         }
 
         $start_time = get_post_meta($post_id, 'event_start_time', true);
         if ($start_time) {
-            // Format: May 13, 2026 at 8:12 AM
-            $t = new DateTime($start_time);
+            $t = new \DateTime($start_time, wp_timezone());
             $meta_parts[] = 'Start Time: ' . $t->format('g:i A M j Y');
         }
 
