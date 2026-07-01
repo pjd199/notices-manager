@@ -16,7 +16,7 @@ function updateExcerptCount() {
     }
 
     const text = excerptField.value.trim();
-    const wordCount = text?.match(/\b[-?(\w+)]+/gi)?.length ?? 0;
+    const wordCount = text?.match(/\b\w+(?:[-']\w+)*\b/gi)?.length ?? 0;
     
     const { excerptMin, excerptMax } = window.ANM_SETTINGS;
     const isWithinRange = wordCount >= excerptMin && wordCount <= excerptMax;

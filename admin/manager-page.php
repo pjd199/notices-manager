@@ -38,7 +38,7 @@ function anm_render_row_content($post_id, $cat_slug, $categories, $is_events = f
 
     // Excerpt Word Count Check
     if (has_excerpt($post_id)) {
-        $word_count = str_word_count(strip_tags(get_the_excerpt($post_id)), 0, '0123456789');
+        $word_count = str_word_count(strip_tags(get_the_excerpt($post_id)), 0, "0123456789'-");
         
         if ($word_count >= $settings['excerpt_min'] && $word_count <= $settings['excerpt_max']) {
             $status_color = 'green';
