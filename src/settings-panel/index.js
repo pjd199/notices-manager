@@ -135,6 +135,31 @@ const NoticeSettingsPanel = () => {
             if (isTargetCategory) {
                 e.preventDefault();
                 e.stopPropagation();
+
+                const referrer = document.referrer;
+                if (referrer) {
+                    try {
+                        const refUrl = new URL(referrer);
+                        const path = refUrl.pathname;
+                        const params = refUrl.searchParams;
+
+                        // 1. Check for specific Notices Manager page
+                        const isNoticesManager = path.endsWith('/wp-admin/edit.php') && params.get('page') === 'notices-manager';
+
+                        // 2. Check for the true "All Posts" page (no custom post_type)
+                        const isAllPosts = path.endsWith('/wp-admin/edit.php') && !params.has('post_type') && !params.has('page');
+
+                        // SHORTCUT: If they came from either target page, bypass the modal completely
+                        if (isNoticesManager || isAllPosts) {
+                            window.location.href = referrer;
+                            return;
+                        }
+                    } catch (err) {
+                        console.error("Referrer parsing failed:", err);
+                    }
+                }
+
+                // FALLBACK: Open the modal if they came from anywhere else
                 setModalOpen(true);
             }
         };
