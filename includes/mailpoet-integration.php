@@ -541,21 +541,3 @@ function process_html_links($html, $newsletter, $queue) {
 
     return $html;
 }
-
-add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $subscriber, $queue, $newsletter_body, $arguments) {
-        if ($shortcode !== '[custom:my_content_block]') {
-        return $shortcode;
-    }
-
-    // 2. Generate your dynamic HTML layout
-    $target_url = 'https://horshamct.org.uk/notices';
-    
-    $html_content = '<div class="promo-box">';
-    $html_content .= '   <h3>Check out our latest update!</h3>';
-    $html_content .= '   <p><a href="' . esc_url($target_url) . '">Click here to read more</a></p>';
-    $html_content .= '</div>';
-
-    // 3. Process the layout strings using the extracted helper function
-    return process_html_links($html_content, $newsletter, $queue);
-    
-}, 10, 6);
