@@ -8,10 +8,11 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
     if (strpos($shortcode, '[custom:download_plain_text') !== 0) return $shortcode;
 
     $date_args = '&year=' . date('Y') . '&month=' . date('m') . '&day=' . date('d');
-    return 'Also available in text only versions:
-                <a href="' . home_url('/?plain_text=html&toc=false') . $date_args . '" target="_blank">online</a>, 
-                <a href="' . home_url('/?plain_text=pdf') . $date_args . '" target="_blank">PDF</a>, 
-                <a href="' . home_url('/?plain_text=docx') . $date_args . '" target="_blank">DOCX</a>';
+    $html = 'Also available in text only versions:
+             <a href="' . home_url('/?plain_text=html&toc=false') . $date_args . '" target="_blank">online</a>, 
+             <a href="' . home_url('/?plain_text=pdf') . $date_args . '" target="_blank">PDF</a>, 
+             <a href="' . home_url('/?plain_text=docx') . $date_args . '" target="_blank">DOCX</a>';
+    return process_html_links($html, $newsletter, $queue);
 }, 10, 6);
 
 add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $subscriber, $queue, $newsletter_body, $arguments) {
@@ -132,7 +133,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
     wp_reset_postdata();
     $output .= '</table>';
     
-    return $output;
+    return process_html_links($output, $newsletter, $queue);
 }, 10, 6);
 
 add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $subscriber, $queue, $newsletter_body, $arguments) {
@@ -324,7 +325,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
 	}
     wp_reset_postdata();
 	
-	return $output;
+    return process_html_links($output, $newsletter, $queue);
 }, 10, 6);
 
 add_filter('mailpoet_newsletter_shortcode', function($shortcode, $newsletter, $subscriber, $queue, $newsletter_body, $arguments) {
@@ -438,7 +439,7 @@ add_filter('mailpoet_newsletter_shortcode', function($shortcode, $newsletter, $s
     }
     $output .= '
 </table>';
-    return $output;
+    return process_html_links($output, $newsletter, $queue);
 }, 10, 6);
 
 add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $subscriber, $queue, $newsletter_body, $arguments) {
@@ -492,7 +493,7 @@ add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $
     $output .= '</ul>';
 
     wp_reset_postdata();
-    return $output;
+    return process_html_links($output, $newsletter, $queue);
 }, 10, 6);
 
 function get_thumbnail_alt_text(int $post_id): string {
@@ -500,3 +501,61 @@ function get_thumbnail_alt_text(int $post_id): string {
     if (!$attachment_id) return '';
     return esc_attr(get_post_meta($attachment_id, '_wp_attachment_image_alt', true));
 }
+
+/**
+ * Processes an HTML string to convert normal <a> tags into MailPoet tracked links
+ * and automatically saves the resulting cryptographic hashes to the database.
+ *
+ * @param string $html       The raw HTML content containing links to track.
+ * @param mixed  $newsletter The MailPoet Newsletter Entity object.
+ * @param mixed  $queue      The MailPoet Sending Queue Entity object.
+ * @return string            The tracked HTML content, or original raw layout on failure.
+ */
+function process_html_links($html, $newsletter, $queue) {
+    if (!class_exists('\MailPoet\DI\ContainerWrapper') || empty($newsletter) || empty($queue)) {
+        return $html; 
+    }
+
+    try {
+        $container = \MailPoet\DI\ContainerWrapper::getInstance();
+        $links_helper = $container->get('MailPoet\Newsletter\Links\Links');
+        
+        $newsletter_id = method_exists($newsletter, 'getId') ? $newsletter->getId() : null;
+        $queue_id      = method_exists($queue, 'getId')      ? $queue->getId()      : null;
+
+        if (!$newsletter_id || !$queue_id) {
+            return $html;
+        }
+
+        $result = $links_helper->process($html, $newsletter_id, $queue_id);
+        if (is_array($result) && isset($result[0])) {
+            $processed_html = $result[0];            
+            if (!empty($result[1])) {
+                $links_helper->save($result[1], $newsletter_id, $queue_id);
+            }
+            return $processed_html;
+        }
+    } catch (\Throwable $e) {
+        error_log("ANM process_html_links: " . $e->getMessage());
+    }
+
+    return $html;
+}
+
+add_filter('mailpoet_newsletter_shortcode', function ($shortcode, $newsletter, $subscriber, $queue, $newsletter_body, $arguments) {
+        if ($shortcode !== '[custom:my_content_block]') {
+        return $shortcode;
+    }
+
+    // 2. Generate your dynamic HTML layout
+    $target_url = 'https://horshamct.org.uk/notices';
+    
+    $html_content = '<div class="promo-box">';
+    $html_content .= '   <h3>Check out our latest update!</h3>';
+    $html_content .= '   <p><a href="' . esc_url($target_url) . '">Click here to read more</a></p>';
+    $html_content .= '</div>';
+
+    // 3. Process the layout strings using the extracted helper function
+    return process_html_links($html_content, $newsletter, $queue);
+    
+}, 10, 6);
