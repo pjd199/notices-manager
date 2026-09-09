@@ -126,9 +126,17 @@ const NoticeSettingsPanel = () => {
         }
     }, [isMissingEventDate, lockPostSaving, unlockPostSaving]);
 
-    // Intercept Back Button Click
     useEffect(() => {
-        const backButton = document.querySelector('.edit-post-fullscreen-mode-close');
+        // Robust selector targeting old class, new Gutenberg class, and structural fallback
+        const selector = [
+            '.edit-post-fullscreen-mode-close',
+            '.editor-post-fullscreen-mode-close',
+            '.editor-header__back-button',
+            'a.components-button[href*="edit.php"]',
+            'a.components-button[href*="site-editor.php"]'
+        ].join(', ');
+
+        const backButton = document.querySelector(selector);
         if (!backButton) return;
 
         const handleBackClick = (e) => {
