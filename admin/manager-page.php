@@ -8,6 +8,12 @@ if (!defined('ABSPATH')) exit;
  * HELPER: Renders the internal content of a row.
  * Isolated so it can be called by the initial loop AND the AJAX refresh.
  */
+
+function is_event_category($name) {
+    $name = strtolower($name);
+    return str_ends_with($name, "event") || str_ends_with($name, "events");
+}
+
 function anm_render_row_content($post_id, $cat_slug, $categories, $is_events = false) {
     $settings = anm_get_settings();
     $post = get_post($post_id);
@@ -18,7 +24,7 @@ function anm_render_row_content($post_id, $cat_slug, $categories, $is_events = f
     $modified = $post->post_modified; // Used to detect if post data changed
     $today = strtotime('today');
     
-    $date_raw = get_post_meta($post_id, ($cat_slug === 'events') ? "event_start_time" : "expiry_date", true);
+    $date_raw = get_post_meta($post_id, is_event_category($cat_slug) ? "event_start_time" : "expiry_date", true);
     $date_ts = $date_raw ? strtotime($date_raw) : false;
     
     $current_tags = wp_get_post_tags($post_id, ['fields' => 'slugs']);
@@ -64,7 +70,7 @@ function anm_render_row_content($post_id, $cat_slug, $categories, $is_events = f
     
     $status_label = ($status !== 'publish') ? ' — ' . ucfirst($status) : '';
     $is_new = floor(($today - $pub_date) / DAY_IN_SECONDS) < $settings['new_days'];
-    $is_stale = ($cat_slug !== 'events' && (($today - $pub_date) > ($settings['stale_days'] * DAY_IN_SECONDS))) || ($date_ts && $date_ts < $today);
+    $is_stale = (!is_event_category($cat_slug) && (($today - $pub_date) > ($settings['stale_days'] * DAY_IN_SECONDS))) || ($date_ts && $date_ts < $today);
 
     $row_bg = '';
     if ($is_new) $row_bg = '#c5ff99';
@@ -147,7 +153,7 @@ function anm_render_page() {
         $cat_obj = get_category_by_slug($cat_slug);
         if (!$cat_obj) continue;
 
-        $is_events = ($cat_slug === 'events');
+        $is_events = is_event_category($cat_slug);
 
         $cat_specific_tags = [];
         foreach ($settings['suffixes'] as $sfx) { $cat_specific_tags[] = $cat_slug . $sfx; }
@@ -498,7 +504,7 @@ add_action('wp_ajax_anm_reset_category_order', function() {
     $cat_slug = isset($_POST['category']) ? sanitize_text_field($_POST['category']) : '';
     $settings = anm_get_settings();
 
-    if (empty($cat_slug) || $cat_slug === 'events') {
+    if (empty($cat_slug) || is_event_category($cat_slug)) {
         wp_send_json_error('Invalid category or category protected from reset.');
     }
 
@@ -563,7 +569,7 @@ add_action('wp_ajax_anm_sync_check', function() {
         $pid = intval($item['id']);
         $post = get_post($pid);
         $cat_slug = sanitize_text_field($item['cat']);
-        $is_events = ($cat_slug === 'events');
+        $is_events = is_event_category($cat_slug);
         if ($post && $post->post_modified !== $item['modified']) {
             $updates[] = [
                 'id'   => $pid,

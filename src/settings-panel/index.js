@@ -45,7 +45,15 @@ const NoticeSettingsPanel = () => {
         );
     };
 
-    const isEvent = checkIsCategory(['events', 'event']);
+    const checkIsCategoryEndsWith = (names) => {
+        return allCategories.some(cat => {
+            const catName = cat.name.toLowerCase();
+            const matchesName = names.some(name => catName.endsWith(name));            
+            return matchesName && selectedCategoryIds.includes(cat.id);
+        });
+    };
+
+    const isEvent = checkIsCategoryEndsWith(['events', 'event']);
     const isTargetCategory = checkIsCategory(window.ANM_SETTINGS.targetCategories);
     const isMissingEventDate = isEvent && !meta?.event_start_time;
 
