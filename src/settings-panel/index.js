@@ -38,6 +38,7 @@ const NoticeSettingsPanel = () => {
     /**
      * 2. Helper Logic
      */
+    /*
     const checkIsCategory = (names) => {
         return allCategories.some(cat => 
             names.includes(cat.name.toLowerCase()) && 
@@ -50,6 +51,21 @@ const NoticeSettingsPanel = () => {
             const catName = cat.name.toLowerCase();
             const matchesName = names.some(name => catName.endsWith(name));            
             return matchesName && selectedCategoryIds.includes(cat.id);
+        });
+    };
+    */
+    const checkIsCategory = (slugs) => {
+        return allCategories.some(cat => 
+            slugs.includes(cat.slug.toLowerCase()) && 
+            selectedCategoryIds.includes(cat.id)
+        );
+    };
+
+    const checkIsCategoryEndsWith = (slugs) => {
+        return allCategories.some(cat => {
+            const catSlug = cat.slug.toLowerCase();
+            const matchesSlug = slugs.some(slug => catSlug.endsWith(slug));            
+            return matchesSlug && selectedCategoryIds.includes(cat.id);
         });
     };
 
