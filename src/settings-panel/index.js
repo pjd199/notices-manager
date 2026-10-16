@@ -34,31 +34,34 @@ const NoticeSettingsPanel = () => {
         allTags: select('core').getEntityRecords('taxonomy', 'post_tag', { per_page: -1 }) || [],
         isDirty: select('core/editor').isEditedPostDirty(),
     }), []);
-    
+
     /**
      * 2. Helper Logic
      */
-    /*
-    const checkIsCategory = (names) => {
-        return allCategories.some(cat => 
-            names.includes(cat.name.toLowerCase()) && 
-            selectedCategoryIds.includes(cat.id)
-        );
-    };
-
-    const checkIsCategoryEndsWith = (names) => {
-        return allCategories.some(cat => {
-            const catName = cat.name.toLowerCase();
-            const matchesName = names.some(name => catName.endsWith(name));            
-            return matchesName && selectedCategoryIds.includes(cat.id);
-        });
-    };
-    */
     const checkIsCategory = (slugs) => {
-        return allCategories.some(cat => 
-            slugs.includes(cat.slug.toLowerCase()) && 
-            selectedCategoryIds.includes(cat.id)
-        );
+        // 1. Find the IDs of the target categories based on the provided slugs
+        const targetCategoryIds = allCategories
+            .filter(cat => slugs.includes(cat.slug.toLowerCase()))
+            .map(cat => cat.id);
+
+        // Helper function to get all descendant (sub-category) IDs for a given category ID
+        const getDescendantIds = (parentId) => {
+            const children = allCategories.filter(cat => cat.parent === parentId);
+            let ids = children.map(child => child.id);
+            children.forEach(child => {
+                ids = ids.concat(getDescendantIds(child.id));
+            });
+            return ids;
+        };
+
+        // 2. Expand target categories to include all their sub-categories
+        const allowedCategoryIds = new Set(targetCategoryIds);
+        targetCategoryIds.forEach(targetId => {
+            getDescendantIds(targetId).forEach(id => allowedCategoryIds.add(id));
+        });
+
+        // 3. Check if any of the post's selected categories match the allowed IDs
+        return selectedCategoryIds.some(catId => allowedCategoryIds.has(catId));
     };
 
     const checkIsCategoryEndsWith = (slugs) => {
