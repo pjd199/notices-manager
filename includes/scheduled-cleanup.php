@@ -11,12 +11,11 @@ define('ANM_EXPIRED_CLEANUP', 'anm_expired_cleanup');
  */
 register_activation_hook(ANM_MAIN_FILE, function() {
     if (!wp_next_scheduled(ANM_EXPIRED_CLEANUP)) {
-        // Calculate next 00:01 in site's local time
         $next_run = new \DateTime('today 00:15', wp_timezone());
         if ($next_run->getTimestamp() <= time()) {
             $next_run->modify('+1 day');
         }
-        wp_schedule_event($next_run->getTimestamp(), 'daily', ANM_EXPIRED_CLEANUP);
+        wp_schedule_single_event($next_run->getTimestamp(), ANM_EXPIRED_CLEANUP);
     }
 });
 
@@ -26,6 +25,10 @@ register_deactivation_hook(ANM_MAIN_FILE, function() {
 
 // The actual cleanup task
 add_action(ANM_EXPIRED_CLEANUP, function () {
+    // Reschedule the next run
+    $next_run = new \DateTime('tomorrow 00:15', wp_timezone());
+    wp_schedule_single_event($next_run->getTimestamp(), ANM_EXPIRED_CLEANUP);
+
     $settings = anm_get_settings();
 
     if (!$settings['cleanup_cron']) {
