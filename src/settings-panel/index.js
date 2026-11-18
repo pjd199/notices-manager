@@ -232,6 +232,8 @@ const NoticeSettingsPanel = () => {
                                         currentDate={meta.event_start_time || null}
                                         onChange={(val) => updateMeta('event_start_time', val)}
                                         is12Hour={true}
+                                        dateOrder='dmy'
+                                        startOfWeek=1
                                     />
                                 </div>
                             </PanelRow>
