@@ -231,7 +231,7 @@ const NoticeSettingsPanel = () => {
                                     <DateTimePicker
                                         currentDate={meta.event_start_time || null}
                                         onChange={(val) => updateMeta('event_start_time', val)}
-                                        is12Hour={false}
+                                        is12Hour={true}
                                     />
                                 </div>
                             </PanelRow>
